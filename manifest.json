@@ -1,0 +1,12 @@
+{
+  "name": "Custom Color System",
+  "id": "1458139260142136474",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "ui.html",
+"editorType": ["figma"],
+"documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  }
+}

@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Color System</title>
+
+    <style>
+        :root {
+            --figma-color-bg: #ffffff;
+            --figma-color-text: #000000;
+            --figma-color-border: rgba(0, 0, 0, 0.1);
+            --figma-color-row-bg: #F5F5F5;
+            --figma-color-row-hover: #EBEBEB;
+            --figma-color-row-active: #E3E3E3;
+            --figma-color-selected: #18A0FB;
+            --figma-color-icon: #8D8D8D;
+            --figma-color-error: #F24822;
+            --figma-color-error-bg: #FFF1F0;
+            --border-radius: 6px;
+        }
+    
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--figma-color-bg);
+            color: var(--figma-color-text);
+            font-size: 11px;
+            line-height: 16px;
+        }
+    
+        /* Layout and Base Styles */
+        .tab-bar {
+            display: flex;
+            border-bottom: 1px solid #E5E5E5;
+            padding: 0 16px;
+            margin-bottom: 16px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            z-index: 1000;
+        }
+    
+        .tab {
+            padding: 8px 0;
+            margin-right: 16px;
+            color: rgba(0,0,0,0.5);
+            cursor: pointer;
+            position: relative;
+        }
+    
+        .tab.active {
+            font-weight: 500;
+            color: rgba(0,0,0,1);
+        }
+    
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            padding: 0 12px;
+            padding-bottom: 48px; /* Space for fixed footer */
+            padding-top: 48px; /* Space for fixed tab-bar */
+            background: linear-gradient(0deg, #FFF 74.93%, #FEFEFE 100%);
+        }
+    
+        .tab-content.active {
+            display: block;
+        }
+
+        .tab-content#about {
+            padding-top: 48px; /* Move content up for about tab */
+            padding-left: 16px; /* Adjust left padding */
+            padding-right: 16px; /* Adjust right padding */
+        }
+
+        .tab-content#donate {
+            padding-top: 40px; /* Move content up for about tab */
+            padding-left: 16px; /* Adjust left padding */
+            padding-right: 16px; /* Adjust right padding */
+        }
+    
+        /* Input Row Base */
+        .input-row {
+            display: flex;
+            align-items: stretch;
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: var(--border-radius);
+            background: var(--figma-color-row-bg);
+            transition: background-color 0.1s ease;
+        }
+    
+        .input-row:hover {
+            background: var(--figma-color-row-hover);
+        }
+    
+        .input-row.error {
+            background: var(--figma-color-error-bg);
+        }
+    
+        .input-row.error .label,
+        .input-row.error .value-display {
+            color: var(--figma-color-error);
+        }
+    
+        /* Label */
+        .label {
+            font-weight: 500; /* Restore font weight to 500 */
+            display: flex;
+            align-items: center;
+            width: 52px;
+            margin-right: 4px;
+        }
+    
+        .settings-toggle-row .label {
+            font-weight: 400; /* Match font weight with about section list items */
+            width: 140px;
+        }
+    
+        /* Input Container */
+        .input-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            margin: -8px 8px -8px 0;
+            padding: 8px 48px 8px 0;
+            border-right: 1.5px solid #FFFFFF;
+        }
+    
+        /* Value Display */
+        .value-display {
+            display: flex;
+            align-items: center;
+        }
+    
+        /* Right-aligned content container */
+        .right-aligned-content {
+            position: absolute;
+            right: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 2;
+        }
+    
+        /* Color preview */
+        .color-preview {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            border: 1px solid var(--figma-color-border);
+        }
+    
+        /* Toggle switch */
+        .toggle-switch {
+            position: relative;
+            width: 28px;
+            height: 16px;
+        }
+    
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+    
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #E5E5E5;
+            transition: .2s;
+            border-radius: 34px;
+        }
+    
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .2s;
+            border-radius: 50%;
+        }
+    
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: var(--figma-color-selected);
+        }
+    
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(12px);
+        }
+    
+        /* Info Button */
+        .info-button {
+            width: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: -8px -8px -8px -8px;
+            padding: 0 4px;
+            color: var(--figma-color-icon);
+            position: relative;
+            z-index: unset;
+        }
+    
+        .info-button:hover {
+            background: rgba(0, 0, 0, 0.06);
+            border-radius: 0 6px 6px 0;
+        }
+    
+        .info-button svg {
+            width: 10px;
+            height: 10px;
+        }
+    
+        /* Input controls */
+        .color-picker {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+    
+        /* Chevron */
+        .chevron {
+            width: 9px;
+            height: 6px;
+            color: var(--figma-color-text);
+            opacity: 0.3;
+            position: relative;
+            top: 1px;
+        }
+    
+        /* Footer and Button Styles */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 12px;
+            background: var(--figma-color-bg);
+            backdrop-filter: blur(8px);
+            border-top: 1px solid var(--figma-color-border);
+            z-index: 100;
+        }
+    
+        button {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 36px;
+            background: var(--figma-color-selected);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+    
+        button:hover:not(:disabled):not(.loading) {
+            background: #0D8DE3;
+        }
+    
+        button:active:not(:disabled):not(.loading) {
+            transform: scale(0.98);
+        }
+    
+        button:disabled:not(.loading) {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+    
+        /* Loading State Styles */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    
+        button span {
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+    
+        .spinner {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+    
+        button.loading {
+            cursor: default;
+            background: var(--figma-color-selected);
+            opacity: 0.9;
+        }
+    
+        button.loading span {
+            opacity: 0;
+        }
+    
+        button.loading .spinner {
+            opacity: 1;
+            animation: spin 0.8s linear infinite;
+        }
+    
+        button.loading:hover {
+            background: var(--figma-color-selected);
+        }
+    
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 4px);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            line-height: 16px;
+            width: 200px;
+            z-index: 10000; /* Increase z-index */
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+    
+        .info-button:hover .tooltip {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    
+        /* About Section */
+        .about-section {
+            margin-bottom: 16px; /* Adjusted margin */
+        }
+    
+        .about-section h3 {
+            font-size: 11px;
+            font-weight: 500;
+            margin-bottom: 4px; /* Adjusted margin */
+        }
+     
+        .about-section p {
+            font-size: 11px;
+            line-height: 16px;
+            margin-bottom: 16px;
+            color: rgba(0,0,0,0.6); /* Adjusted color */
+        }
+
+        .version-block {
+            display: inline-block; /* Adjust to inline-block */
+            font-family: 'SF Mono', 'Roboto Mono', monospace;
+            font-size: 8px; /* Smaller font size */
+            line-height: 1.5;
+            color: var(--figma-color-text);
+            background: var(--figma-color-bg);
+            padding: 2px 6px; /* Tightened padding */
+            border-radius: 6px;
+            border: 1px solid var(--figma-color-border);
+            white-space: pre-wrap;
+        }
+
+        .about-section p {
+            font-size: 11px;
+            line-height: 16px;
+            margin-bottom: 12px;
+            margin-top: 4px;
+            color: rgba(0, 0, 0, 0.8);
+        }
+
+        blockquote {
+            margin: 0 0 16px 0; /* Add bottom margin for spacing */
+            padding: 8px 12px;
+            border-left: 4px solid var(--figma-color-border);
+            background: var(--figma-color-row-bg);
+            font-size: 10px;
+            line-height: 1.5;
+            font-family: 'SF Mono', 'Roboto Mono', monospace;
+        }
+
+        .table-container {
+            overflow-x: auto; /* Make table horizontally scrollable */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            table-layout: fixed; /* Ensure equal column widths */
+        }
+
+        th, td {
+            border: 1px solid var(--figma-color-border);
+            padding: 6px; /* Reduced padding */
+            text-align: left;
+            font-size: 9px; /* Smaller font size */
+            line-height: 1.4; /* Adjusted line height */
+            font-family: 'SF Mono', 'Roboto Mono', monospace;
+            width: 50%; /* Equal column widths */
+        }
+
+        th {
+            background: var(--figma-color-row-bg);
+            font-weight: 500;
+        }
+
+        .about-section h4 {
+            font-size: 10px;
+            font-weight: 400;
+            color: rgba(0, 0, 0, 0.7); /* More subdued color */
+            margin-bottom: 8px;
+        }
+
+        .menu-item {
+            background: var(--figma-color-row-bg);
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .menu-item:hover {
+            background: var(--figma-color-row-hover);
+        }
+
+        .sheet {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 88vh;
+            background: var(--figma-color-bg);
+            border-radius: 12px 12px 0 0;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .sheet.active {
+            transform: translateY(0);
+            pointer-events: auto;
+            opacity: 1;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            transition: opacity 0.3s ease-in-out;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .sheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px 8px 20px; /* Adjusted bottom padding */
+            border-bottom: 1px solid var(--figma-color-border);
+        }
+
+        .sheet-header h3 {
+            font-size: 11px;
+            font-weight: 500;
+            margin: 0;
+            color: var(--figma-color-text);
+        }
+
+        .sheet-content {
+            padding: 8px 20px; /* Adjusted top padding */
+            overflow-y: auto;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .close-btn svg {
+            width: 13px;
+            height: 13px;
+            stroke: rgba(0, 0, 0, 0.6);
+        }
+
+        /* Dropdown styles */
+       
+/* Dropdown styles */
+.select-input {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    padding: 0 8px;
+    background: var(--figma-color-bg);
+    color: var(--figma-color-text);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+}
+
+.select-input:focus {
+    outline: none;
+}
+
+.select-input option {
+    background: var(--figma-color-bg);
+    color: var(--figma-color-text);
+    padding: 8px;
+    font-size: 11px;
+    line-height: 16px;
+}
+
+/* Settings specific styles */
+#existingCollectionsRow {
+    margin-top: 8px;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.settings-section {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--figma-color-border);
+}
+
+/* Value display for dropdowns */
+.input-container {
+    position: relative;
+}
+
+.input-container .value-display {
+    color: var(--figma-color-text);
+}
+
+.input-container .value-display.disabled {
+    opacity: 0.5;
+}
+
+.select-input:focus + .value-display {
+    opacity: 0;
+}
+
+/* Animation for showing/hiding collections dropdown */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Disabled styles for export demo components */
+.input-row.settings-toggle-row.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+    </style>
+
+</head>
+<body>
+    <!-- Tab Navigation -->
+    <div class="tab-bar">
+        <div class="tab active" data-tab="colors">Colors</div>
+        <div class="tab" data-tab="settings">Settings</div>
+        <div class="tab" data-tab="about">About</div>
+        <div class="tab" data-tab="donate">Donate</div>
+    </div>
+
+    <!-- Colors Tab Content -->
+    <div id="colors" class="tab-content active">
+        <!-- Brand Color Row -->
+        <div class="input-row error" id="brandRow">
+            <div class="label">Brand</div>
+            <div class="input-container">
+                <div class="value-display">
+                    <span>Required</span>
+                </div>
+                <div class="right-aligned-content">
+                    <div class="color-preview" id="brandPreview"></div>
+                    <svg class="chevron" width="9" height="6" viewBox="0 0 9 6" fill="none">
+                        <path d="M1 1L4.5 4.5L8 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <input type="color" id="brandColorPicker" class="color-picker" value="#18A0FB">
+            </div>
+            <div class="info-button">
+                <svg viewBox="0 0 12 12" fill="none">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M6 12A6 6 0 106 0a6 6 0 000 12zM5.333 5.333v4h1.334v-4H5.333zm0-2.666V4h1.334V2.667H5.333z" fill="currentColor"/>
+                </svg>
+                <div class="tooltip">Choose a primary brand color. This will be used as the foundation for generating your complete color system.</div>
+            </div>
+        </div>
+        
+        <!-- Neutral Color Row -->
+        <div class="input-row">
+            <div class="label">Neutral</div>
+            <div class="input-container">
+                <div class="value-display">
+                    <span id="neutralValue">Auto-select</span>
+                </div>
+                <div class="right-aligned-content">
+                    <div class="color-preview" id="neutralPreview"></div>
+                    <svg class="chevron" width="9" height="6" viewBox="0 0 9 6" fill="none">
+                        <path d="M1 1L4.5 4.5L8 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <select id="neutralSelect" class="select-input">
+                    <option value="auto">Auto-select</option>
+                    <option value="#8D8D8D">Gray (#8D8D8D)</option>
+                    <option value="#8E8C99">Mauve (#8E8C99)</option>
+                    <option value="#8B8D98">Slate (#8B8D98)</option>
+                    <option value="#868E8B">Sage (#868E8B)</option>
+                    <option value="#898E87">Olive (#898E87)</option>
+                    <option value="#8D8D86">Sand (#8D8D86)</option>
+                </select>
+            </div>
+            <div class="info-button">
+                <svg viewBox="0 0 12 12" fill="none">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M6 12A6 6 0 106 0a6 6 0 000 12zM5.333 5.333v4h1.334v-4H5.333zm0-2.666V4h1.334V2.667H5.333z" fill="currentColor"/>
+                </svg>
+                <div class="tooltip">Choose a neutral color scale for your interface elements. Auto-select will pick a harmonious neutral color based on your brand color.</div>
+            </div>
+        </div>
+    
+        <!-- Success Color Row -->
+        <div class="input-row">
+            <div class="label">Success</div>
+            <div class="input-container">
+                <div class="value-display">
+                    <span id="successValue">Auto-select</span>
+                </div>
+                <div class="right-aligned-content">
+                    <div class="color-preview" id="successPreview"></div>
+                    <svg class="chevron" width="9" height="6" viewBox="0 0 9 6" fill="none">
+                        <path d="M1 1L4.5 4.5L8 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <select id="successSelect" class="select-input">
+                    <option value="auto">Auto-select</option>
+                    <option value="#30A46C">Green (#30A46C)</option>
+                    <option value="#12A594">Teal (#12A594)</option>
+                    <option value="#29A383">Jade (#29A383)</option>
+                    <option value="#86EAD4">Mint (#86EAD4)</option>
+                </select>
+            </div>
+            <div class="info-button">
+                <svg viewBox="0 0 12 12" fill="none">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M6 12A6 6 0 106 0a6 6 0 000 12zM5.333 5.333v4h1.334v-4H5.333zm0-2.666V4h1.334V2.667H5.333z" fill="currentColor"/>
+                </svg>
+                <div class="tooltip">Choose a success color scale for positive states and actions. Auto-select will pick a harmonious color based on your brand color.</div>
+            </div>
+        </div>
+    
+        <!-- Error Color Row -->
+        <div class="input-row">
+            <div class="label">Error</div>
+            <div class="input-container">
+                <div class="value-display">
+                    <span id="errorValue">Auto-select</span>
+                </div>
+                <div class="right-aligned-content">
+                    <div class="color-preview" id="errorPreview"></div>
+                    <svg class="chevron" width="9" height="6" viewBox="0 0 9 6" fill="none">
+                        <path d="M1 1L4.5 4.5L8 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <select id="errorSelect" class="select-input">
+                    <option value="auto">Auto-select</option>
+                    <option value="#E5484D">Red (#E5484D)</option>
+                    <option value="#E54666">Ruby (#E54666)</option>
+                    <option value="#E54D2E">Tomato (#E54D2E)</option>
+                    <option value="#E93D82">Crimson (#E93D82)</option>
+                </select>
+            </div>
+            <div class="info-button">
+                <svg viewBox="0 0 12 12" fill="none">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M6 12A6 6 0 106 0a6 6 0 000 12zM5.333 5.333v4h1.334v-4H5.333zm0-2.666V4h1.334V2.667H5.333z" fill="currentColor"/>
+                </svg>
+                <div class="tooltip">Choose an error color scale for negative states and actions. Auto-select will pick a harmonious color based on your brand color.</div>
+            </div>
+        </div>
+        
+        <!-- Theme Row -->
+        <div class="input-row">
+            <div class="label">Theme</div>
+            <div class="input-container">
+                <div class="value-display">
+                    <span id="modeValue">Light</span>
+                </div>
+                <div class="right-aligned-content">
+                    <svg class="chevron" width="9" height="6" viewBox="0 0 9 6" fill="none">
+                        <path d="M1 1L4.5 4.5L8 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <select id="appearanceSelect" class="select-input">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="both">Light & Dark</option>
+                </select>
+            </div>
+            <div class="info-button">
+                <svg viewBox="0 0 12 12" fill="none">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M6 12A6 6 0 106 0a6 6 0 000 12zM5.333 5.333v4h1.334v-4H5.333zm0-2.666V4h1.334V2.667H5.333z" fill="currentColor"/>
+                </svg>
+                <div class="tooltip">Choose which themes to generate. Single themes will create one collection, while Light & Dark will create a collection with two modes (requires a Team or Professional plan).</div>            </div>
+        </div>
+    
+        <!-- Footer with Generate Button -->
+        <div class="footer">
+            <button id="generatePaletteBtn" disabled>
+                <span>Generate & Save Variables</span>
+                <div class="spinner"></div>
+            </button>
+        </div>
+
+    </div>
+
+
+    <!-- Settings Tab Content -->
+    <div id="settings" class="tab-content">
+       
+    <!-- Advanced Variable Export Toggle -->
+    <div class="input-row settings-toggle-row">
+        <div class="label">Advanced Variable Export</div>
+        <div class="input-container">
+            <div class="right-aligned-content">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="includePrimitives">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div class="info-button">
+            <svg viewBox="0 0 12 12" fill="none">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M6 12A6 6 0 106 0a6 6 0 000 12zM5.333 5.333v4h1.334v-4H5.333zm0-2.666V4h1.334V2.667H5.333z" fill="currentColor"/>
+            </svg>
+            <div class="tooltip">Instead of providing a single collection with easy-to-understand names (semantic), we give you two collections that mirror how our code functions: one for color scales (primitives) from the Radix library and another that directly maps these values to semantic names.</div>
+        </div>
+    </div>
+
+    <!-- Export Demo Components Toggle -->
+    <div class="input-row settings-toggle-row">
+        <div class="label">Export Demo Components</div>
+        <div class="input-container">
+            <div class="right-aligned-content">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="exportDemo">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div class="info-button">
+            <svg viewBox="0 0 12 12" fill="none">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M6 12A6 6 0 106 0a6 6 0 000 12zM5.333 5.333v4h1.334v-4H5.333zm0-2.666V4h1.334V2.667H5.333z" fill="currentColor"/>
+            </svg>
+            <div class="tooltip">Export demo components to visualize and test the generated color system in a real-world context.</div>
+        </div>
+    </div>
+
+    <!-- Automatic Color Pairings Toggle -->
+    <div class="input-row settings-toggle-row">
+        <div class="label">Automatic color pairings</div>
+        <div class="input-container">
+            <div class="right-aligned-content">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="autoFunctionalToggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div class="info-button">
+            <svg viewBox="0 0 12 12" fill="none">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M6 12A6 6 0 106 0a6 6 0 000 12zM5.333 5.333v4h1.334v-4H5.333zm0-2.666V4h1.334V2.667H5.333z" fill="currentColor"/>
+            </svg>
+            <div class="tooltip">Automatically select harmonious colors for functional elements like errors, success states, and neutral interface elements.</div>
+        </div>
+    </div>
+</div>
+
+    <!-- About Tab Content -->
+    <div id="about" class="tab-content">
+        <div class="about-section">
+            <code class="version-block">1.6</code>
+            <h3>Custom Color System Plugin</h3>
+            <p>Turn a single color into a complete, accessible design system with generated scales, organized in a semantic structure for easy implementation.</p>
+        </div>
+
+        <div class="menu">
+            <div class="menu-item" data-section="semantic">
+                <span>Semantic Naming</span>
+                <svg class="chevron" width="9" height="6" viewBox="0 0 9 6" fill="none">
+                    <path d="M1 1L4.5 4.5L8 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="menu-item" data-section="logic">
+                <span>Color System Logic</span>
+                <svg class="chevron" width="9" height="6" viewBox="0 0 9 6" fill="none">
+                    <path d="M1 1L4.5 4.5L8 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="menu-item" data-section="pairings">
+                <span>Automatic Color Pairings</span>
+                <svg class="chevron" width="9" height="6" viewBox="0 0 9 6" fill="none">
+                    <path d="M1 1L4.5 4.5L8 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="menu-item" data-section="mapping">
+                <span>Color Mapping Reference</span>
+                <svg class="chevron" width="9" height="6" viewBox="0 0 9 6" fill="none">
+                    <path d="M1 1L4.5 4.5L8 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="menu-item" data-section="licensing">
+                <span>Licensing & Disclosures</span>
+                <svg class="chevron" width="9" height="6" viewBox="0 0 9 6" fill="none">
+                    <path d="M1 1L4.5 4.5L8 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Bottom sheet -->
+        <div class="overlay"></div>
+        <div class="sheet">
+            <div class="sheet-header">
+                <h3></h3>
+                <div class="close-btn">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="sheet-content">
+                <h4 style="font-weight: 400; color: rgba(0, 0, 0, 0.7);">Surface</h4>
+                <div class="table-container">
+                    <table>
+    <!-- Donate Tab Content -->
+    <div id="donate" class="tab-content">
+        <div class="about-section">
+            <h3>Donate</h3>
+            <p>Coming soon...</p>
+        </div>
+    </div>
+
+    <script>
+
+
+        function hexToHSL(hexColor) {
+            hexColor = hexColor.replace(/^#/, '');
+            let r = parseInt(hexColor.substr(0, 2), 16) / 255;
+            let g = parseInt(hexColor.substr(2, 2), 16) / 255;
+            let b = parseInt(hexColor.substr(4, 2), 16) / 255;
+            
+            let max = Math.max(r, g, b);
+            let min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+        
+            if (max === min) {
+                h = s = 0;
+            } else {
+                let d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+        
+            return {
+                h: Math.round(h * 360),
+                s: Math.round(s * 100),
+                l: Math.round(l * 100)
+            };
+        }
+        
+        function determineNeutralColor(hexColor) {
+            const { h, s, l } = hexToHSL(hexColor);
+            
+            if (s < 10) return "#8D8D8D";
+            if (l < 15) return "#8B8D98";
+            
+            if (h >= 330 || h < 30) return "#8E8C99";  // Mauve for reds
+            if (h >= 30 && h < 90) return "#8D8D86";   // Sand for oranges/yellows
+            if (h >= 90 && h < 150) return "#868E8B";  // Sage for greens
+            if (h >= 150 && h < 210) return "#8B8D98"; // Slate for teals
+            if (h >= 210 && h < 270) return "#8B8D98"; // Slate for blues
+            if (h >= 270 && h < 330) return "#8E8C99"; // Mauve for purples
+            
+            return "#8D8D8D";
+        }
+        
+        function determineSuccessColor(hexColor) {
+            const { h, s, l } = hexToHSL(hexColor);
+            
+            if (s < 10) return "#30A46C";
+            if (h >= 180 && h < 270) return "#12A594";  // Teal for blues
+            if (s < 40 || l < 40) return "#29A383";     // Jade for muted/sophisticated
+            if (s > 80 && l > 60) return "#86EAD4";     // Mint for bright/saturated
+            
+            return "#30A46C";                           // Default green
+        }
+        
+        function determineErrorColor(hexColor) {
+            const { h, s, l } = hexToHSL(hexColor);
+            
+            if (s < 10) return "#E5484D";
+            if (h >= 180 && h < 300) return "#E54666";  // Ruby for cooler colors
+            if (s < 40 || l < 40) return "#E93D82";     // Crimson for muted
+            if (h >= 15 && h < 45) return "#E54D2E";    // Tomato for warm colors
+            
+            return "#E5484D";                           // Default red
+        }
+        
+        function setButtonLoading(isLoading) {
+            const button = document.getElementById('generatePaletteBtn');
+            const MINIMUM_LOADING_TIME = 2000;
+            
+            if (isLoading) {
+                console.log('Setting loading state ON');
+                button.classList.add('loading');
+                button.disabled = true;
+                button.dataset.loadingStartTime = Date.now().toString();
+            } else {
+                const loadingStartTime = parseInt(button.dataset.loadingStartTime || '0');
+                const loadingDuration = Date.now() - loadingStartTime;
+                const remainingTime = Math.max(0, MINIMUM_LOADING_TIME - loadingDuration);
+    
+                console.log(`Loading duration: ${loadingDuration}ms, remaining time: ${remainingTime}ms`);
+    
+                setTimeout(() => {
+                    console.log('Setting loading state OFF');
+                    button.classList.remove('loading');
+                    button.disabled = false;
+                    button.dataset.loadingStartTime = '';
+                }, remainingTime);
+            }
+        }
+        
+        function updateVisibility() {
+            const autoSelect = document.getElementById('autoFunctionalToggle').checked;
+            const functionalRows = [
+                document.querySelector('.input-row:nth-child(2)'), // Neutral row
+                document.querySelector('.input-row:nth-child(3)'), // Success row
+                document.querySelector('.input-row:nth-child(4)')  // Error row
+            ];
+            
+            functionalRows.forEach(row => {
+                if (row) {
+                    if (autoSelect) {
+                        row.style.display = 'none';
+                    } else {
+                        row.style.display = 'flex';
+                        row.style.animation = 'fadeIn 0.2s ease-in-out';
+                    }
+                }
+            });
+        }
+        
+        function updateUI() {
+            const colorInput = document.getElementById("brandColorPicker");
+            const brandValue = document.querySelector("#brandRow .value-display span:first-child");
+            const brandPreview = document.getElementById("brandPreview");
+            const generateBtn = document.getElementById("generatePaletteBtn");
+            const brandRow = document.getElementById("brandRow");
+            
+            if (!colorInput.value || colorInput.value === '#000000') {
+                brandRow.classList.add('error');
+                brandValue.textContent = 'Required';
+                generateBtn.disabled = true;
+            } else {
+                brandRow.classList.remove('error');
+                brandValue.textContent = colorInput.value.toUpperCase();
+                generateBtn.disabled = false;
+                
+                updateColorPreviews(colorInput.value);
+            }
+            
+            brandPreview.style.backgroundColor = colorInput.value;
+        }
+        
+        function updateColorPreviews(brandColor) {
+            const selectors = [
+                { id: 'neutral', determineColor: determineNeutralColor },
+                { id: 'success', determineColor: determineSuccessColor },
+                { id: 'error', determineColor: determineErrorColor }
+            ];
+        
+            selectors.forEach(({ id, determineColor }) => {
+                const select = document.getElementById(`${id}Select`);
+                if (select.value === "auto") {
+                    const recommendedColor = determineColor(brandColor);
+                    document.getElementById(`${id}Value`).textContent = "Auto-select";
+                    document.getElementById(`${id}Preview`).style.backgroundColor = recommendedColor;
+                    select.querySelector('option[value="auto"]').textContent = `Auto-select (${recommendedColor})`;
+                }
+            });
+        }
+        
+        function updatePreview(type) {
+            const select = document.getElementById(`${type}Select`);
+            const preview = document.getElementById(`${type}Preview`);
+            const valueDisplay = document.getElementById(`${type}Value`);
+            
+            if (select.value === "auto") {
+                const brandColor = document.getElementById("brandColorPicker").value;
+                const determineColor = {
+                    neutral: determineNeutralColor,
+                    success: determineSuccessColor,
+                    error: determineErrorColor
+                }[type];
+                
+                const recommendedColor = determineColor(brandColor);
+                preview.style.backgroundColor = recommendedColor;
+                valueDisplay.textContent = "Auto-select";
+                select.querySelector('option[value="auto"]').textContent = `Auto-select (${recommendedColor})`;
+            } else {
+                preview.style.backgroundColor = select.value;
+                const colorName = select.options[select.selectedIndex].text.split(' ')[0];
+                valueDisplay.textContent = colorName;
+            }
+        }
+        
+        function updateModeValue() {
+            const select = document.getElementById("appearanceSelect");
+            const valueDisplay = document.getElementById("modeValue");
+            valueDisplay.textContent = select.options[select.selectedIndex].text;
+        }
+        
+        function initializeEventListeners() {
+            const colorInput = document.getElementById("brandColorPicker");
+            const generateBtn = document.getElementById("generatePaletteBtn");
+            const autoSelect = document.getElementById('autoFunctionalToggle').checked;
+        
+            ['neutral', 'success', 'error'].forEach(type => {
+                document.getElementById(`${type}Select`).addEventListener('change', () => updatePreview(type));
+            });
+            
+            colorInput.addEventListener('input', updateUI);
+            colorInput.addEventListener('change', updateUI);
+            
+            document.getElementById('appearanceSelect').addEventListener('change', updateModeValue);
+            document.getElementById('autoFunctionalToggle').addEventListener('change', () => {
+                updateVisibility();
+                updateUI();
+            });
+
+        
+            generateBtn.addEventListener('click', () => {
+    // Set loading state immediately
+    setButtonLoading(true);
+
+    const data = {
+        type: 'generate-palette',
+        hexColor: colorInput.value,
+        neutral: autoSelect ? determineNeutralColor(colorInput.value) : 
+                (document.getElementById('neutralSelect').value === "auto" ? 
+                determineNeutralColor(colorInput.value) : document.getElementById('neutralSelect').value),
+        success: autoSelect ? determineSuccessColor(colorInput.value) : 
+                (document.getElementById('successSelect').value === "auto" ? 
+                determineSuccessColor(colorInput.value) : document.getElementById('successSelect').value),
+        error: autoSelect ? determineErrorColor(colorInput.value) : 
+                (document.getElementById('errorSelect').value === "auto" ? 
+                determineErrorColor(colorInput.value) : document.getElementById('errorSelect').value),
+        appearance: document.getElementById('appearanceSelect').value,
+        includePrimitives: document.getElementById('includePrimitives').checked,
+        exportDemo: document.getElementById('exportDemo').checked
+    };
+
+    console.log('Sending message to plugin:', data);
+    parent.postMessage({ pluginMessage: data }, '*');
+});
+        
+            // Listen for completion message from the plugin
+            window.onmessage = (event) => {
+    if (event.data.pluginMessage === 'complete') {
+        console.log('Received completion message from plugin');
+        setButtonLoading(false);
+    } else if (event.data.pluginMessage.type === 'capability-check') {
+        const msg = event.data.pluginMessage;
+        const appearanceSelect = document.getElementById('appearanceSelect');
+        const bothOption = appearanceSelect.querySelector('option[value="both"]');
+        
+        if (!msg.supportsMultipleModes) {
+            bothOption.disabled = true;
+            // If "both" is currently selected, switch to "light"
+            if (appearanceSelect.value === 'both') {
+                appearanceSelect.value = 'light';
+                updateModeValue(); // Update the display value
+            }
+            console.log("→ Disabled Light & Dark option in dropdown");
+        }
+    } else if (event.data.pluginMessage.type === 'populate-collections') {
+        const collections = event.data.pluginMessage.collections;
+        const existingCollectionsSelect = document.getElementById('existingCollectionsSelect');
+        existingCollectionsSelect.innerHTML = '';
+        if (collections.length > 0) {
+            collections.forEach(collection => {
+                const option = document.createElement('option');
+                option.value = collection.id;
+                option.textContent = collection.name;
+                existingCollectionsSelect.appendChild(option);
+            });
+            existingCollectionsSelect.disabled = false;
+        } else {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No valid collections found';
+            existingCollectionsSelect.appendChild(option);
+            existingCollectionsSelect.disabled = true;
+        }
+    }
+};
+            
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+        
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(tc => tc.classList.remove('active'));
+        
+                    tab.classList.add('active');
+                    document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
+                });
+            });
+        
+            updateVisibility();
+            updateUI();
+            ['neutral', 'success', 'error'].forEach(type => updatePreview(type));
+            updateModeValue();
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('appearanceSelect').value = 'both';
+            updateModeValue();
+            initializeEventListeners();
+        });
+
+        const sections = {
+            semantic: {
+                title: 'Semantic Naming',
+                content: `
+                    <p>Semantic naming is the practice of using meaningful names for variables that describe their purpose or role in the design system. Our color system organizes variables into four key functional categories:</p>
+                    <div style="height: 16px;"></div> <!-- Added spacing -->
+                    <blockquote style="background: rgba(0, 0, 0, 0.05); border-left: 4px solid rgba(0, 0, 0, 0.1);">
+                        <h4>Surface</h4>
+                        <p>These form the foundation of your application's color scheme, serving as the base background color for your pages, cards, modals, and other core layout elements. Surface colors incorporate subtle hints of your brand color to create a cohesive, personalized feel while maintaining proper contrast with default text and icons.</p>
+                    </blockquote>
+                    <blockquote style="background: rgba(0, 0, 0, 0.05); border-left: 4px solid rgba(0, 0, 0, 0.1);">
+                        <h4>Background</h4>
+                        <p>Colors for UI components like buttons, cards, and form elements. These colors reflect your brand identity more prominently, helping establish visual hierarchy and communicate component states through consistent color application that feels uniquely yours.</p>
+                    </blockquote>
+                    <blockquote style="background: rgba(0, 0, 0, 0.05); border-left: 4px solid rgba(0, 0, 0, 0.1);">
+                        <h4>Text & Icons</h4>
+                        <p>A unified set of color values that ensure legible content and clear iconography across different contexts. These colors are designed to maintain proper contrast ratios in all usage scenarios.</p>
+                    </blockquote>
+                    <blockquote style="background: rgba(0, 0, 0, 0.05); border-left: 4px solid rgba(0, 0, 0, 0.1);">
+                        <h4>Borders</h4>
+                        <p>Colors specifically designed for component boundaries and visual separators, helping define element edges and create clear visual structure in your interface.</p>
+                    </blockquote>
+                `
+            },
+            logic: {
+                title: 'Color System Logic',
+                content: `
+                    <p>The plugin leverages Radix Colors to generate comprehensive color scales, which are then mapped to semantic names for practical application. The system processes your brand color along with carefully selected neutral, success, and error colors through Radix's algorithm. These base colors, combined with white (#FFFFFF) for light mode and deep gray (#1C1C1C) for dark mode, generate complete color scales including regular, alpha, and contrast variations.</p>
+                    
+                    <p>To ensure accessibility and visual harmony, neutral, success, and error colors are chosen from a curated set of options that have been tested for proper contrast ratios. These color scales are then automatically mapped to semantic variable names that reflect their intended use in the interface.</p>
+                `
+            },
+            pairings: {
+                title: 'Automatic Color Pairings',
+                content: `
+                    <p>When enabled, the plugin analyzes your brand color to automatically select complementary colors for your interface. It intelligently selects from our pre-defined sets of neutral, error, and success colors, choosing combinations that best complement your brand color while maintaining proper contrast ratios and accessibility standards.</p>
+                `
+            },
+            licensing: {
+                title: 'Licensing & Disclosures',
+                content: `
+                    <p>This plugin utilizes the Radix Colors library to generate color scales. Radix Colors is an open-source project licensed under the MIT License. For more information, please visit the <a href="https://www.npmjs.com/package/radix-theme-generator?activeTab=code" target="_blank">Radix License</a>.</p>
+                `
+            },
+            mapping: {
+                title: 'Color Mapping Reference',
+                content: `
+                    <h4 style="font-weight: 400; color: rgba(0, 0, 0, 0.7);">Surface</h4>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Semantic Name</th>
+                                    <th>Radix Scale</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>surface-base-default</td>
+                                    <td>Background/1</td>
+                                </tr>
+                                <tr>
+                                    <td>surface-base-secondary</td>
+                                    <td>Brand/1</td>
+                                </tr>
+                                <tr>
+                                    <td>surface-primary</td>
+                                    <td>Brand/2</td>
+                                </tr>
+                                <tr>
+                                    <td>surface-secondary</td>
+                                    <td>Brand/3</td>
+                                </tr>
+                                <tr>
+                                    <td>surface-shadow</td>
+                                    <td>Neutral Alpha/4</td>
+                                </tr>
+                                <tr>
+                                    <td>surface-overlay</td>
+                                    <td>#000000 at 65% opacity</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h4 style="font-weight: 400; color: rgba(0, 0, 0, 0.7);">Text</h4>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Semantic Name</th>
+                                    <th>Radix Scale</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>text-default</td>
+                                    <td>Neutral/12</td>
+                                </tr>
+                                <tr>
+                                    <td>text-secondary</td>
+                                    <td>Neutral/11</td>
+                                </tr>
+                                <tr>
+                                    <td>text-link</td>
+                                    <td>Brand/9</td>
+                                </tr>
+                                <tr>
+                                    <td>text-on-bg-primary</td>
+                                    <td>Brand Contrast/1</td>
+                                </tr>
+                                <tr>
+                                    <td>text-on-bg-primary-subtle</td>
+                                    <td>Brand/11</td>
+                                </tr>
+                                <tr>
+                                    <td>text-on-surface-overlay</td>
+                                    <td>#FFFFFF</td>
+                                </tr>
+                                <tr>
+                                    <td>text-on-bg-error</td>
+                                    <td>Error Contrast/1</td>
+                                </tr>
+                                <tr>
+                                    <td>text-on-bg-error-subtle</td>
+                                    <td>Error/11</td>
+                                </tr>
+                                <tr>
+                                    <td>text-on-bg-success</td>
+                                    <td>Success Contrast/1</td>
+                                </tr>
+                                <tr>
+                                    <td>text-on-bg-success-subtle</td>
+                                    <td>Success/11</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h4 style="font-weight: 400; color: rgba(0, 0, 0, 0.7);">Icons</h4>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Semantic Name</th>
+                                    <th>Radix Scale</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>icon-default</td>
+                                    <td>Neutral/12</td>
+                                </tr>
+                                <tr>
+                                    <td>icon-secondary</td>
+                                    <td>Neutral/11</td>
+                                </tr>
+                                <tr>
+                                    <td>icon-link</td>
+                                    <td>Brand/9</td>
+                                </tr>
+                                <tr>
+                                    <td>icon-on-bg-primary</td>
+                                    <td>Brand Contrast/1</td>
+                                </tr>
+                                <tr>
+                                    <td>icon-on-bg-primary-subtle</td>
+                                    <td>Brand/11</td>
+                                </tr>
+                                <tr>
+                                    <td>icon-on-surface-overlay</td>
+                                    <td>#FFFFFF</td>
+                                </tr>
+                                <tr>
+                                    <td>icon-on-bg-error</td>
+                                    <td>Error Contrast/1</td>
+                                </tr>
+                                <tr>
+                                    <td>icon-on-bg-error-subtle</td>
+                                    <td>Error/11</td>
+                                </tr>
+                                <tr>
+                                    <td>icon-on-bg-success</td>
+                                    <td>Success Contrast/1</td>
+                                </tr>
+                                <tr>
+                                    <td>icon-on-bg-success-subtle</td>
+                                    <td>Success/11</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h4 style="font-weight: 400; color: rgba(0, 0, 0, 0.7);">Background</h4>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Semantic Name</th>
+                                    <th>Radix Scale</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>bg-primary</td>
+                                    <td>Brand/9</td>
+                                </tr>
+                                <tr>
+                                    <td>bg-primary-focus</td>
+                                    <td>Brand/10</td>
+                                </tr>
+                                <tr>
+                                    <td>bg-primary-subtle</td>
+                                    <td>Brand/3</td>
+                                </tr>
+                                <tr>
+                                    <td>bg-primary-subtle-focus</td>
+                                    <td>Brand/4</td>
+                                </tr>
+                                <tr>
+                                    <td>bg-primary-overlay</td>
+                                    <td>Brand Alpha/6</td>
+                                </tr>
+                                <tr>
+                                    <td>bg-error</td>
+                                    <td>Error/9</td>
+                                </tr>
+                                <tr>
+                                    <td>bg-error-focus</td>
+                                    <td>Error/10</td>
+                                </tr>
+                                <tr>
+                                    <td>bg-error-subtle</td>
+                                    <td>Error/3</td>
+                                </tr>
+                                <tr>
+                                    <td>bg-error-subtle-focus</td>
+                                    <td>Error/4</td>
+                                </tr>
+                                <tr>
+                                    <td>bg-success</td>
+                                    <td>Success/9</td>
+                                </tr>
+                                <tr>
+                                    <td>bg-success-focus</td>
+                                    <td>Success/10</td>
+                                </tr>
+                                <tr>
+                                    <td>bg-success-subtle</td>
+                                    <td>Success/3</td>
+                                </tr>
+                                <tr>
+                                    <td>bg-success-subtle-focus</td>
+                                    <td>Success/4</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h4 style="font-weight: 400; color: rgba(0, 0, 0, 0.7);">Borders</h4>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Semantic Name</th>
+                                    <th>Radix Scale</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>border-with-any-surface</td>
+                                    <td>Neutral/7</td>
+                                </tr>
+                                <tr>
+                                    <td>border-with-any-surface-focus</td>
+                                    <td>Neutral/8</td>
+                                </tr>
+                                <tr>
+                                    <td>border-with-bg-primary</td>
+                                    <td>Brand/11</td>
+                                </tr>
+                                <tr>
+                                    <td>border-with-bg-primary-subtle</td>
+                                    <td>Brand/8</td>
+                                </tr>
+                                <tr>
+                                    <td>border-with-bg-success</td>
+                                    <td>Success/11</td>
+                                </tr>
+                                <tr>
+                                    <td>border-with-bg-success-subtle</td>
+                                    <td>Success/8</td>
+                                </tr>
+                                <tr>
+                                    <td>border-with-bgerror</td>
+                                    <td>Error/11</td>
+                                </tr>
+                                <tr>
+                                    <td>border-with-bg-error-subtle</td>
+                                    <td>Error/8</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `
+            }
+        };
+
+        function showSheet(section) {
+            const sheet = document.querySelector('.sheet');
+            const overlay = document.querySelector('.overlay');
+            const body = document.body;
+            
+            // Set content
+            sheet.querySelector('.sheet-header h3').textContent = sections[section].title;
+            sheet.querySelector('.sheet-content').innerHTML = sections[section].content;
+            
+            // Reset scroll position
+            sheet.querySelector('.sheet-content').scrollTop = 0;
+            
+            // Disable body scroll and show overlay and sheet
+            body.style.overflow = 'hidden';
+            requestAnimationFrame(() => {
+                overlay.classList.add('active');
+                sheet.classList.add('active');
+            });
+        }
+
+        function hideSheet() {
+            const sheet = document.querySelector('.sheet');
+            const overlay = document.querySelector('.overlay');
+            const body = document.body;
+            
+            sheet.classList.remove('active');
+            overlay.classList.remove('active');
+            body.style.overflow = 'auto';
+        }
+
+        // Setup click handlers
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const section = item.dataset.section;
+                showSheet(section);
+            });
+        });
+
+        // Close handlers
+        document.querySelector('.close-btn').addEventListener('click', hideSheet);
+        document.querySelector('.overlay').addEventListener('click', hideSheet);
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') hideSheet();
+        });
+    </script>
+</body>
+</html>
