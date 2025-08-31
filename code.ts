@@ -1037,7 +1037,7 @@ async function createButton(
   await applyVariableWithFallback(
     button,
     collection,
-    "border/border-with-any-surface", // Set stroke color to border/border-with-surface
+    "border/border-with-surface-primary", // Set stroke color to border/border-with-surface
     'backgrounds'
   );
 
@@ -1078,7 +1078,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     card,
     collection,
-    "border/border-with-any-surface",
+    "border/border-with-surface-primary",
     'backgrounds'
   );
 
@@ -1101,7 +1101,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     preview,
     collection,
-    "surface/surface-secondary",
+    "surface/surface-brand-secondary",
     'backgrounds'
   );
 
@@ -1226,7 +1226,7 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
   await applyVariableWithFallback(
     list,
     collection,
-    "surface/surface-base-default",
+    "surface/surface-primary",
     'backgrounds'
   );
 
@@ -1234,7 +1234,7 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
   await applyVariableWithFallback(
     list,
     collection,
-    "border/border-with-any-surface",
+    "border/border-with-surface-primary",
     'backgrounds'
   );
 
@@ -1259,7 +1259,7 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
       await applyVariableWithFallback(
         line,
         collection,
-        "border/border-with-any-surface",
+        "border/border-with-surface-primary",
         'backgrounds'
       );
       list.appendChild(line);
@@ -1332,7 +1332,7 @@ async function createProductListItem(
   await applyVariableWithFallback(
     thumbnail,
     collection,
-    "border/border-with-any-surface",
+    "border/border-with-surface-primary",
     'backgrounds'
   );
 
