@@ -462,8 +462,6 @@ async function createPrimitiveVariables(
     createOrUpdateColorVariable(collection, modeId, `Neutral Scale Alpha/${index + 1}`, color)
   ));
 
-  // Update surface-secondary to use neutral scale/2
-  await createOrUpdateColorVariable(collection, modeId, "surface/surface-secondary", neutralTheme.accentScale[2]);
 
   // Create or update success color scales
   await Promise.all(successTheme.accentScale.map((color, index) => 
