@@ -664,7 +664,13 @@ async function createSemanticVariables(
     createSemanticVar("background/bg-success", "Success Scale/9"),
     createSemanticVar("background/bg-success-focus", "Success Scale/10"),
     createSemanticVar("background/bg-success-subtle", "Success Scale/3"),
-    createSemanticVar("background/bg-success-subtle-focus", "Success Scale/4")
+    createSemanticVar("background/bg-success-subtle-focus", "Success Scale/4"),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-strong", brandTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle-strong", brandTheme.accentScale[3]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-error-strong", errorTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle-strong", errorTheme.accentScale[3]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-success-strong", successTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle-strong", successTheme.accentScale[3])
   ]);
 
   // Border variables
