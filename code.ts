@@ -1615,7 +1615,6 @@ async function createNotification(
   notification.appendChild(textWrapper);
   return notification;
 }
-
 // ===============================================
 // Part 6.4: Demo Components - Complete Integration
 // ===============================================
@@ -1777,3 +1776,4 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
     }
   }
 };
+
