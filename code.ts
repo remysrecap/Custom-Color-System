@@ -653,24 +653,24 @@ async function createSemanticVariables(
   // Background variables
   await Promise.all([
     createSemanticVar("background/bg-brand-primary", "Brand Scale/9"),
-    createSemanticVar("background/bg-brand-primary-strong", "Brand Scale/10"),
+    createSemanticVar("background/bg-brand-primary-emphasized", "Brand Scale/10"),
     createSemanticVar("background/bg-brand-primary-subtle", "Brand Scale/3"),
-    createSemanticVar("background/bg-brand-primary-subtle-strong", "Brand Scale/4"),
+    createSemanticVar("background/bg-brand-primary-subtle-emphasized", "Brand Scale/4"),
     createSemanticVar("background/bg-brand-primary-overlay", "Brand Scale Alpha/6"),
     createSemanticVar("background/bg-error", "Error Scale/9"),
-    createSemanticVar("background/bg-error-strong", "Error Scale/10"),
+    createSemanticVar("background/bg-error-emphasized", "Error Scale/10"),
     createSemanticVar("background/bg-error-subtle", "Error Scale/3"),
-    createSemanticVar("background/bg-error-subtle-strong", "Error Scale/4"),
+    createSemanticVar("background/bg-error-subtle-emphasized", "Error Scale/4"),
     createSemanticVar("background/bg-success", "Success Scale/9"),
-    createSemanticVar("background/bg-success-strong", "Success Scale/10"),
+    createSemanticVar("background/bg-success-emphasized", "Success Scale/10"),
     createSemanticVar("background/bg-success-subtle", "Success Scale/3"),
-    createSemanticVar("background/bg-success-subtle-strong", "Success Scale/4")
+    createSemanticVar("background/bg-success-subtle-emphasized", "Success Scale/4")
   ]);
 
   // Border variables
   await Promise.all([
     createSemanticVar("border/border-with-any-surface", "Neutral Scale/7"), // Updated from border-with-surface
-    createSemanticVar("border/border-with-any-surface-strong", "Neutral Scale/8"), // Updated from border-with-surface-focus
+    createSemanticVar("border/border-with-any-surface-emphasized", "Neutral Scale/8"), // Updated from border-with-surface-focus
     createSemanticVar("border/border-with-bg-brand-primary", "Brand Scale/11"), // Updated from border-with-bg-primary
     createSemanticVar("border/border-with-bg-brand-primary-subtle", "Brand Scale/8"), // Updated from border-with-bg-primary-subtle
     createSemanticVar("border/border-with-bg-success", "Success Scale/11"), // Updated from border-with-success
