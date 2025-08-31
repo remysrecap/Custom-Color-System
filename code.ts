@@ -652,37 +652,31 @@ async function createSemanticVariables(
 
   // Background variables
   await Promise.all([
-    createSemanticVar("background/bg-brand-primary", "Brand Scale/9"),
-    createSemanticVar("background/bg-brand-primary-focus", "Brand Scale/10"),
-    createSemanticVar("background/bg-brand-primary-subtle", "Brand Scale/3"),
-    createSemanticVar("background/bg-brand-primary-subtle-focus", "Brand Scale/4"),
-    createSemanticVar("background/bg-brand-primary-overlay", "Brand Scale Alpha/6"),
-    createSemanticVar("background/bg-error", "Error Scale/9"),
-    createSemanticVar("background/bg-error-focus", "Error Scale/10"),
-    createSemanticVar("background/bg-error-subtle", "Error Scale/3"),
-    createSemanticVar("background/bg-error-subtle-focus", "Error Scale/4"),
-    createSemanticVar("background/bg-success", "Success Scale/9"),
-    createSemanticVar("background/bg-success-focus", "Success Scale/10"),
-    createSemanticVar("background/bg-success-subtle", "Success Scale/3"),
-    createSemanticVar("background/bg-success-subtle-focus", "Success Scale/4"),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary", brandTheme.accentScale[8]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-strong", brandTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle", brandTheme.accentScale[2]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle-strong", brandTheme.accentScale[3]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-overlay", brandTheme.accentScaleAlpha[5]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-error", errorTheme.accentScale[8]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-error-strong", errorTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle", errorTheme.accentScale[2]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle-strong", errorTheme.accentScale[3]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-success", successTheme.accentScale[8]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-success-strong", successTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle", successTheme.accentScale[2]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle-strong", successTheme.accentScale[3])
   ]);
 
   // Border variables
   await Promise.all([
-    createSemanticVar("border/border-with-any-surface", "Neutral Scale/7"), // Updated from border-with-surface
-    createSemanticVar("border/border-with-any-surface-focus", "Neutral Scale/8"), // Updated from border-with-surface-focus
-    createSemanticVar("border/border-with-bg-brand-primary", "Brand Scale/11"), // Updated from border-with-bg-primary
-    createSemanticVar("border/border-with-bg-brand-primary-subtle", "Brand Scale/8"), // Updated from border-with-bg-primary-subtle
-    createSemanticVar("border/border-with-bg-success", "Success Scale/11"), // Updated from border-with-success
-    createSemanticVar("border/border-with-bg-success-subtle", "Success Scale/8"), // Updated from border-with-success-subtle
-    createSemanticVar("border/border-with-bg-error", "Error Scale/11"), // Updated from border-with-error
-    createSemanticVar("border/border-with-bg-error-subtle", "Error Scale/8") // Updated from border-with-error-subtle
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-any-surface", neutralTheme.accentScale[6]), // Updated from border-with-surface
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-any-surface-strong", neutralTheme.accentScale[7]), // Updated from border-with-surface-focus
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-brand-primary", brandTheme.accentScale[10]), // Updated from border-with-bg-primary
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-brand-primary-subtle", brandTheme.accentScale[7]), // Updated from border-with-bg-primary-subtle
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-success", successTheme.accentScale[10]), // Updated from border-with-success
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-success-subtle", successTheme.accentScale[7]), // Updated from border-with-success-subtle
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-error", errorTheme.accentScale[10]), // Updated from border-with-error
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-error-subtle", errorTheme.accentScale[7]) // Updated from border-with-error-subtle
   ]);
 }
 
@@ -741,24 +735,24 @@ async function createDirectVariables(
   // Background variables
   await Promise.all([
     createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary", brandTheme.accentScale[8]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-focus", brandTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-strong", brandTheme.accentScale[9]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle", brandTheme.accentScale[2]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle-focus", brandTheme.accentScale[3]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle-strong", brandTheme.accentScale[3]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-overlay", brandTheme.accentScaleAlpha[5]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-error", errorTheme.accentScale[8]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-error-focus", errorTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-error-strong", errorTheme.accentScale[9]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle", errorTheme.accentScale[2]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle-focus", errorTheme.accentScale[3]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle-strong", errorTheme.accentScale[3]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-success", successTheme.accentScale[8]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-success-focus", successTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-success-strong", successTheme.accentScale[9]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle", successTheme.accentScale[2]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle-focus", successTheme.accentScale[3])
+    createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle-strong", successTheme.accentScale[3])
   ]);
 
   // Border variables
   await Promise.all([
     createOrUpdateColorVariable(collection, modeId, "border/border-with-any-surface", neutralTheme.accentScale[6]), // Updated from border-with-surface
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-any-surface-focus", neutralTheme.accentScale[7]), // Updated from border-with-surface-focus
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-any-surface-strong", neutralTheme.accentScale[7]), // Updated from border-with-surface-focus
     createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-brand-primary", brandTheme.accentScale[10]), // Updated from border-with-bg-primary
     createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-brand-primary-subtle", brandTheme.accentScale[7]), // Updated from border-with-bg-primary-subtle
     createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-success", successTheme.accentScale[10]), // Updated from border-with-success
