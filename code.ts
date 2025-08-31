@@ -625,8 +625,8 @@ async function createSemanticVariables(
     createSemanticVar("text/text-primary", "Neutral Scale/12"),
     createSemanticVar("text/text-secondary", "Neutral Scale/11"),
     createSemanticVar("text/text-brand-primary", linkVarId ? "Accessibility/1" : "Brand Scale/9"),
-    createSemanticVar("text/text-on-bg-primary", "Brand Contrast/1"),
-    createSemanticVar("text/text-on-bg-primary-subtle", "Brand Scale/11"),
+    createSemanticVar("text/text-on-bg-brand-primary", "Brand Contrast/1"),
+    createSemanticVar("text/text-on-bg-brand-primary-subtle", "Brand Scale/11"),
     createSemanticVar("text/text-on-bg-error", "Error Contrast/1"),
     createSemanticVar("text/text-on-bg-error-subtle", "Error Scale/11"),
     createSemanticVar("text/text-on-bg-success", "Success Contrast/1"),
@@ -639,8 +639,8 @@ async function createSemanticVariables(
     createSemanticVar("icon/icon-primary", "Neutral Scale/12"),
     createSemanticVar("icon/icon-secondary", "Neutral Scale/11"),
     createSemanticVar("icon/icon-brand-primary", linkVarId ? "Accessibility/1" : "Brand Scale/9"),
-    createSemanticVar("icon/icon-on-bg-primary", "Brand Contrast/1"),
-    createSemanticVar("icon/icon-on-bg-primary-subtle", "Brand Scale/11"),
+    createSemanticVar("icon/icon-on-bg-brand-primary", "Brand Contrast/1"),
+    createSemanticVar("icon/icon-on-bg-brand-primary-subtle", "Brand Scale/11"),
     createSemanticVar("icon/icon-on-bg-error", "Error Contrast/1"),
     createSemanticVar("icon/icon-on-bg-error-subtle", "Error Scale/11"),
     createSemanticVar("icon/icon-on-bg-success", "Success Contrast/1"),
@@ -707,8 +707,8 @@ async function createDirectVariables(
     createOrUpdateColorVariable(collection, modeId, "text/text-primary", neutralTheme.accentScale[11]),
     createOrUpdateColorVariable(collection, modeId, "text/text-secondary", neutralTheme.accentScale[10]),
     createOrUpdateContrastColorVariable(collection, modeId, "text/text-brand-primary", brandTheme.accentScale[8], brandTheme.background),
-    createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-primary", brandTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-primary-subtle", brandTheme.accentScale[10]),
+    createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-brand-primary", brandTheme.accentContrast),
+    createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-brand-primary-subtle", brandTheme.accentScale[10]),
     createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-error", errorTheme.accentContrast),
     createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-error-subtle", errorTheme.accentScale[10]),
     createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-success", successTheme.accentContrast),
@@ -721,8 +721,8 @@ async function createDirectVariables(
     createOrUpdateColorVariable(collection, modeId, "icon/icon-primary", neutralTheme.accentScale[11]),
     createOrUpdateColorVariable(collection, modeId, "icon/icon-secondary", neutralTheme.accentScale[10]),
     createOrUpdateContrastColorVariable(collection, modeId, "icon/icon-brand-primary", brandTheme.accentScale[8], brandTheme.background),
-    createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-primary", brandTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-primary-subtle", brandTheme.accentScale[10]),
+    createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-brand-primary", brandTheme.accentContrast),
+    createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-brand-primary-subtle", brandTheme.accentScale[10]),
     createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-error", errorTheme.accentContrast),
     createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-error-subtle", errorTheme.accentScale[10]),
     createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-success", successTheme.accentContrast),
@@ -805,10 +805,10 @@ const FALLBACK_COLORS: {
   text: {
     'text-primary': { r: 0, g: 0, b: 0 },
     'text-secondary': { r: 0.4, g: 0.4, b: 0.4 },
-    'text-on-bg-primary': { r: 1, g: 1, b: 1 },
+    'text-on-bg-brand-primary': { r: 1, g: 1, b: 1 },
     'text-on-bg-error': { r: 1, g: 1, b: 1 },
     'text-on-bg-success': { r: 1, g: 1, b: 1 },
-    'text-on-bg-primary-subtle': { r: 0.1, g: 0.6, b: 1 },
+    'text-on-bg-brand-primary-subtle': { r: 0.1, g: 0.6, b: 1 },
     'text-on-bg-error-subtle': { r: 0.8, g: 0.2, b: 0.2 },
     'text-on-bg-success-subtle': { r: 0.2, g: 0.8, b: 0.2 }
   }
@@ -817,11 +817,11 @@ const FALLBACK_COLORS: {
 const BUTTON_STYLES: Record<ButtonVariant, ButtonStyle> = {
   primary: {
     bg: 'background/bg-brand-primary',
-    text: 'text/text-on-bg-primary'
+    text: 'text/text-on-bg-brand-primary'
   },
   secondary: {
     bg: 'background/bg-brand-primary-subtle',
-    text: 'text/text-on-bg-primary-subtle'
+    text: 'text/text-on-bg-brand-primary-subtle'
   },
   destructive: {
     bg: 'background/bg-error',
@@ -1422,7 +1422,7 @@ async function createNotifications(collection: VariableCollection): Promise<Fram
     { 
       message: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer euismod sodales nam tomer lima consequat.", 
               bgVar: "bg-brand-primary-subtle",
-        textVar: "text-on-bg-primary-subtle" 
+        textVar: "text-on-bg-brand-primary-subtle" 
     }
   ];
 
@@ -1574,7 +1574,7 @@ async function createNotification(
         boundVariables: {
           "color": {
             type: "VARIABLE_ALIAS",
-            id: (await findVariable(collection, "icon/icon-on-bg-primary-subtle"))?.id || ""
+            id: (await findVariable(collection, "icon/icon-on-bg-brand-primary-subtle"))?.id || ""
           }
         }
       }];
