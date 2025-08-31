@@ -671,8 +671,8 @@ async function createSemanticVariables(
   await Promise.all([
     createSemanticVar("border/border-with-any-surface", "Neutral Scale/7"), // Updated from border-with-surface
     createSemanticVar("border/border-with-any-surface-focus", "Neutral Scale/8"), // Updated from border-with-surface-focus
-    createSemanticVar("border/border-with-bg-primary", "Brand Scale/11"), // Updated from border-with-bg-default
-    createSemanticVar("border/border-with-bg-primary-subtle", "Brand Scale/8"), // Updated from border-with-bg-default-subtle
+    createSemanticVar("border/border-with-bg-brand-primary", "Brand Scale/11"), // Updated from border-with-bg-primary
+    createSemanticVar("border/border-with-bg-brand-primary-subtle", "Brand Scale/8"), // Updated from border-with-bg-primary-subtle
     createSemanticVar("border/border-with-bg-success", "Success Scale/11"), // Updated from border-with-success
     createSemanticVar("border/border-with-bg-success-subtle", "Success Scale/8"), // Updated from border-with-success-subtle
     createSemanticVar("border/border-with-bg-error", "Error Scale/11"), // Updated from border-with-error
@@ -753,8 +753,8 @@ async function createDirectVariables(
   await Promise.all([
     createOrUpdateColorVariable(collection, modeId, "border/border-with-any-surface", neutralTheme.accentScale[6]), // Updated from border-with-surface
     createOrUpdateColorVariable(collection, modeId, "border/border-with-any-surface-focus", neutralTheme.accentScale[7]), // Updated from border-with-surface-focus
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-primary", brandTheme.accentScale[10]), // Updated from border-with-bg-default
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-primary-subtle", brandTheme.accentScale[7]), // Updated from border-with-bg-default-subtle
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-brand-primary", brandTheme.accentScale[10]), // Updated from border-with-bg-primary
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-brand-primary-subtle", brandTheme.accentScale[7]), // Updated from border-with-bg-primary-subtle
     createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-success", successTheme.accentScale[10]), // Updated from border-with-success
     createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-success-subtle", successTheme.accentScale[7]), // Updated from border-with-success-subtle
     createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-error", errorTheme.accentScale[10]), // Updated from border-with-error
@@ -1479,7 +1479,7 @@ async function createNotification(
     collection,
     bgVarName === "bg-error-subtle" ? "border/border-with-bg-error-subtle" :
     bgVarName === "bg-success-subtle" ? "border/border-with-bg-success-subtle" :
-            "border/border-with-bg-primary-subtle",
+            "border/border-with-bg-brand-primary-subtle",
     'backgrounds'
   );
 
