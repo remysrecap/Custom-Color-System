@@ -669,8 +669,8 @@ async function createSemanticVariables(
 
   // Border variables
   await Promise.all([
-    createSemanticVar("border/border-with-any-surface", "Neutral Scale/7"), // Updated from border-with-surface
-    createSemanticVar("border/border-with-any-surface-emphasized", "Neutral Scale/8"), // Updated from border-with-surface-focus
+    createSemanticVar("border/border-with-surface-primary", "Neutral Scale/7"), // Updated from border-with-any-surface
+    createSemanticVar("border/border-with-surface-secondary", "Neutral Scale/8"), // Updated from border-with-any-surface-emphasized
     createSemanticVar("border/border-with-bg-brand-primary", "Brand Scale/11"), // Updated from border-with-bg-primary
     createSemanticVar("border/border-with-bg-brand-primary-subtle", "Brand Scale/8"), // Updated from border-with-bg-primary-subtle
     createSemanticVar("border/border-with-bg-success", "Success Scale/11"), // Updated from border-with-success
@@ -751,8 +751,8 @@ async function createDirectVariables(
 
   // Border variables
   await Promise.all([
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-any-surface", neutralTheme.accentScale[6]), // Updated from border-with-surface
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-any-surface-strong", neutralTheme.accentScale[7]), // Updated from border-with-surface-focus
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-surface-primary", neutralTheme.accentScale[6]), // Updated from border-with-any-surface
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-surface-secondary", neutralTheme.accentScale[7]), // Updated from border-with-any-surface-focus
     createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-brand-primary", brandTheme.accentScale[10]), // Updated from border-with-bg-primary
     createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-brand-primary-subtle", brandTheme.accentScale[7]), // Updated from border-with-bg-primary-subtle
     createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-success", successTheme.accentScale[10]), // Updated from border-with-success
