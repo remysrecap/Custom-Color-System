@@ -1323,7 +1323,7 @@ async function createProductListItem(
   await applyVariableWithFallback(
     thumbnail,
     collection,
-    "surface/surface-base-secondary",
+    "surface/surface-secondary",
     'backgrounds'
   );
 
@@ -1352,7 +1352,7 @@ async function createProductListItem(
   await applyVariableWithFallback(
     itemTitle,
     collection,
-    "text/text-default",
+    "text/text-primary",
     'text'
   );
 
