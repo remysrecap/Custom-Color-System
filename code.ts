@@ -1831,7 +1831,7 @@ async function createCategorySection(category: string, items: DocumentationItem[
     // Add separator line (except for last item)
     if (i < items.length - 1) {
       const separator = figma.createLine();
-      separator.resize(900, 0);
+      separator.resize(1100, 0);
       separator.strokeWeight = 0.75;
       separator.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
       await applyVariableWithFallback(separator, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
@@ -1871,10 +1871,21 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   primitiveHeader.fontSize = 12;
   primitiveHeader.fontName = { family: "Inter", style: "Medium" };
   primitiveHeader.textAutoResize = "HEIGHT";
-  primitiveHeader.resize(400, 16);
+  primitiveHeader.resize(300, 16);
   // Apply text color variable
   await applyVariableWithFallback(primitiveHeader, collection, "text/text-neutral-secondary", 'text');
   headerRow.appendChild(primitiveHeader);
+
+  // Hex Value header
+  const hexValueHeader = figma.createText();
+  hexValueHeader.characters = "Hex Value";
+  hexValueHeader.fontSize = 12;
+  hexValueHeader.fontName = { family: "Inter", style: "Medium" };
+  hexValueHeader.textAutoResize = "HEIGHT";
+  hexValueHeader.resize(200, 16);
+  // Apply text color variable
+  await applyVariableWithFallback(hexValueHeader, collection, "text/text-neutral-secondary", 'text');
+  headerRow.appendChild(hexValueHeader);
 
   return headerRow;
 }
@@ -1891,7 +1902,7 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   row.itemSpacing = 16;
   row.fills = [];
   // Set width to fill container
-  row.resize(900, row.height);
+  row.resize(1100, row.height);
 
   // Color swatch
   const swatch = figma.createFrame();
@@ -1959,6 +1970,31 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   primitiveBadge.appendChild(primitiveText);
 
   row.appendChild(primitiveBadge);
+
+  // Hex Value badge
+  const hexValueBadge = figma.createFrame();
+  hexValueBadge.name = `${item.name} Hex Badge`;
+  hexValueBadge.layoutMode = "HORIZONTAL";
+  hexValueBadge.primaryAxisSizingMode = "AUTO";
+  hexValueBadge.counterAxisSizingMode = "AUTO";
+  hexValueBadge.paddingLeft = 8;
+  hexValueBadge.paddingRight = 8;
+  hexValueBadge.paddingTop = 4;
+  hexValueBadge.paddingBottom = 4;
+  hexValueBadge.cornerRadius = 6;
+  // Apply background color variable
+  await applyVariableWithFallback(hexValueBadge, collection, "surface/surface-neutral-secondary", 'backgrounds');
+
+  const hexValueText = figma.createText();
+  hexValueText.characters = "#000000"; // Placeholder - we'll need to get the actual hex value
+  hexValueText.fontSize = 12;
+  hexValueText.fontName = { family: "Inter", style: "Regular" };
+  hexValueText.textAutoResize = "HEIGHT";
+  // Apply text color variable
+  await applyVariableWithFallback(hexValueText, collection, "text/text-neutral-secondary", 'text');
+  hexValueBadge.appendChild(hexValueText);
+
+  row.appendChild(hexValueBadge);
 
   return row;
 }
