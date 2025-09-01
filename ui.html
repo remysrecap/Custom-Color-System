@@ -810,6 +810,25 @@
         </div>
     </div>
 
+    <!-- Export Documentation Toggle -->
+    <div class="input-row settings-toggle-row">
+        <div class="label">Export Documentation</div>
+        <div class="input-container">
+            <div class="right-aligned-content">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="exportDocumentation">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+        <div class="info-button">
+            <svg viewBox="0 0 12 12" fill="none">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M6 12A6 6 0 106 0a6 6 0 000 12zM5.333 5.333v4h1.334v-4H5.333zm0-2.666V4h1.334V2.667H5.333z" fill="currentColor"/>
+            </svg>
+            <div class="tooltip">Export documentation frames showing color styles with their names, visual swatches, and primitive source values.</div>
+        </div>
+    </div>
+
     <!-- Automatic Color Pairings Toggle -->
     <div class="input-row settings-toggle-row">
         <div class="label">Automatic color pairings</div>
@@ -1118,7 +1137,8 @@
                 determineErrorColor(colorInput.value) : document.getElementById('errorSelect').value),
         appearance: document.getElementById('appearanceSelect').value,
         includePrimitives: document.getElementById('includePrimitives').checked,
-        exportDemo: document.getElementById('exportDemo').checked
+        exportDemo: document.getElementById('exportDemo').checked,
+        exportDocumentation: document.getElementById('exportDocumentation').checked
     };
 
     console.log('Sending message to plugin:', data);

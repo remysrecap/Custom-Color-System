@@ -48,7 +48,8 @@ interface PluginMessage {
   error: string;
   appearance: "light" | "dark" | "both";
   includePrimitives: boolean;
-  exportDemo: boolean;  // Add this line
+  exportDemo: boolean;
+  exportDocumentation: boolean;  // Add this line
 }
 
 // Utility function to convert hex colors to RGB format for Figma
@@ -293,7 +294,7 @@ let isClosing = false;
 
 figma.ui.onmessage = async (msg: PluginMessage) => {
   if (msg.type === "generate-palette") {
-    const { hexColor, neutral, success, error, appearance, includePrimitives, exportDemo } = msg;
+    const { hexColor, neutral, success, error, appearance, includePrimitives, exportDemo, exportDocumentation: shouldExportDocumentation } = msg;
     try {
       console.log("Generating palette with message:", msg);
       const versionNumber = await getNextVersionNumber();
@@ -383,6 +384,11 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
         if (exportDemo) {
           await exportDemoComponents(primitiveCollection, semanticCollection);
         }
+
+        // Create documentation if enabled
+        if (shouldExportDocumentation) {
+          await exportDocumentation(primitiveCollection, semanticCollection);
+        }
       } else {
         collection = figma.variables.createVariableCollection(`CCS ${versionNumber}`);
         
@@ -403,6 +409,11 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
         // Create demo components if enabled
         if (exportDemo) {
           await exportDemoComponents(collection);
+        }
+
+        // Create documentation if enabled
+        if (shouldExportDocumentation) {
+          await exportDocumentation(collection);
         }
       }
 
@@ -1626,152 +1637,259 @@ interface RadixTheme {
   background: string;
 }
 
-interface PluginMessage {
-  type: string;
-  hexColor: string;
-  neutral: string;  
-  success: string;  
-  error: string;
-  appearance: "light" | "dark" | "both";
-  includePrimitives: boolean;
-  exportDemo: boolean;  // Add this line
+
+
+// ===============================================
+// Part 7: Documentation Export
+// ===============================================
+
+// Types for documentation
+interface DocumentationItem {
+  name: string;
+  variablePath: string;
+  primitiveSource: string;
+  category: 'surface' | 'text' | 'icon' | 'background' | 'border';
 }
 
-// Main message handler modification
-figma.ui.onmessage = async (msg: PluginMessage) => {
-  if (msg.type === "generate-palette") {
-    const { hexColor, neutral, success, error, appearance, includePrimitives, exportDemo } = msg;
-    try {
-      console.log("Generating palette with message:", msg);
-      const versionNumber = await getNextVersionNumber();
-      console.log("Next version number:", versionNumber);
-      
-      const lightBrandTheme: RadixTheme = generateRadixColors({
-        appearance: "light",
-        accent: hexColor,
-        gray: "#CCCCCC",
-        background: "#FFFFFF"
-      });
+// Documentation data structure
+const DOCUMENTATION_ITEMS: DocumentationItem[] = [
+  // Surface items
+  { name: "Surface-neutral-primary", variablePath: "surface/surface-neutral-primary", primitiveSource: "Background/1", category: 'surface' },
+  { name: "Surface-neutral-secondary", variablePath: "surface/surface-neutral-secondary", primitiveSource: "Neutral Scale/2", category: 'surface' },
+  { name: "Surface-brand-primary", variablePath: "surface/surface-brand-primary", primitiveSource: "Brand Scale/2", category: 'surface' },
+  { name: "Surface-brand-secondary", variablePath: "surface/surface-brand-secondary", primitiveSource: "Brand Scale/3", category: 'surface' },
+  { name: "Surface-shadow", variablePath: "surface/surface-shadow", primitiveSource: "Neutral Scale Alpha/4", category: 'surface' },
+  { name: "Surface-overlay", variablePath: "surface/surface-overlay", primitiveSource: "#000000 at 65% opacity", category: 'surface' },
+  
+  // Text items
+  { name: "Text-neutral-primary", variablePath: "text/text-neutral-primary", primitiveSource: "Neutral Scale/12", category: 'text' },
+  { name: "Text-neutral-secondary", variablePath: "text/text-neutral-secondary", primitiveSource: "Neutral Scale/11", category: 'text' },
+  { name: "Text-brand-primary", variablePath: "text/text-brand-primary", primitiveSource: "Accessibility/1", category: 'text' },
+  { name: "Text-on-bg-brand-primary", variablePath: "text/text-on-bg-brand-primary", primitiveSource: "Brand Contrast/1", category: 'text' },
+  { name: "Text-on-bg-brand-primary-subtle", variablePath: "text/text-on-bg-brand-primary-subtle", primitiveSource: "Brand Scale/11", category: 'text' },
+  { name: "Text-on-bg-error", variablePath: "text/text-on-bg-error", primitiveSource: "Error Contrast/1", category: 'text' },
+  { name: "Text-on-bg-error-subtle", variablePath: "text/text-on-bg-error-subtle", primitiveSource: "Error Scale/11", category: 'text' },
+  { name: "Text-on-bg-success", variablePath: "text/text-on-bg-success", primitiveSource: "Success Contrast/1", category: 'text' },
+  { name: "Text-on-bg-success-subtle", variablePath: "text/text-on-bg-success-subtle", primitiveSource: "Success Scale/11", category: 'text' },
+  { name: "Text-on-surface-overlay", variablePath: "text/text-on-surface-overlay", primitiveSource: "#FFFFFF", category: 'text' },
+  
+  // Icon items
+  { name: "Icon-neutral-primary", variablePath: "icon/icon-neutral-primary", primitiveSource: "Neutral Scale/12", category: 'icon' },
+  { name: "Icon-neutral-secondary", variablePath: "icon/icon-neutral-secondary", primitiveSource: "Neutral Scale/11", category: 'icon' },
+  { name: "Icon-brand-primary", variablePath: "icon/icon-brand-primary", primitiveSource: "Accessibility/1", category: 'icon' },
+  { name: "Icon-on-bg-brand-primary", variablePath: "icon/icon-on-bg-brand-primary", primitiveSource: "Brand Contrast/1", category: 'icon' },
+  { name: "Icon-on-bg-brand-primary-subtle", variablePath: "icon/icon-on-bg-brand-primary-subtle", primitiveSource: "Brand Scale/11", category: 'icon' },
+  { name: "Icon-on-bg-error", variablePath: "icon/icon-on-bg-error", primitiveSource: "Error Contrast/1", category: 'icon' },
+  { name: "Icon-on-bg-error-subtle", variablePath: "icon/icon-on-bg-error-subtle", primitiveSource: "Error Scale/11", category: 'icon' },
+  { name: "Icon-on-bg-success", variablePath: "icon/icon-on-bg-success", primitiveSource: "Success Contrast/1", category: 'icon' },
+  { name: "Icon-on-bg-success-subtle", variablePath: "icon/icon-on-bg-success-subtle", primitiveSource: "Success Scale/11", category: 'icon' },
+  { name: "Icon-on-surface-overlay", variablePath: "icon/icon-on-surface-overlay", primitiveSource: "#FFFFFF", category: 'icon' },
+  
+  // Background items
+  { name: "Bg-brand-primary", variablePath: "background/bg-brand-primary", primitiveSource: "Brand Scale/9", category: 'background' },
+  { name: "Bg-brand-primary-emphasized", variablePath: "background/bg-brand-primary-emphasized", primitiveSource: "Brand Scale/10", category: 'background' },
+  { name: "Bg-brand-primary-subtle", variablePath: "background/bg-brand-primary-subtle", primitiveSource: "Brand Scale/3", category: 'background' },
+  { name: "Bg-brand-primary-subtle-emphasized", variablePath: "background/bg-brand-primary-subtle-emphasized", primitiveSource: "Brand Scale/4", category: 'background' },
+  { name: "Bg-brand-primary-overlay", variablePath: "background/bg-brand-primary-overlay", primitiveSource: "Brand Scale Alpha/6", category: 'background' },
+  { name: "Bg-error", variablePath: "background/bg-error", primitiveSource: "Error Scale/9", category: 'background' },
+  { name: "Bg-error-emphasized", variablePath: "background/bg-error-emphasized", primitiveSource: "Error Scale/10", category: 'background' },
+  { name: "Bg-error-subtle", variablePath: "background/bg-error-subtle", primitiveSource: "Error Scale/3", category: 'background' },
+  { name: "Bg-error-subtle-emphasized", variablePath: "background/bg-error-subtle-emphasized", primitiveSource: "Error Scale/4", category: 'background' },
+  { name: "Bg-success", variablePath: "background/bg-success", primitiveSource: "Success Scale/9", category: 'background' },
+  { name: "Bg-success-emphasized", variablePath: "background/bg-success-emphasized", primitiveSource: "Success Scale/10", category: 'background' },
+  { name: "Bg-success-subtle", variablePath: "background/bg-success-subtle", primitiveSource: "Success Scale/3", category: 'background' },
+  { name: "Bg-success-subtle-emphasized", variablePath: "background/bg-success-subtle-emphasized", primitiveSource: "Success Scale/4", category: 'background' },
+  
+  // Border items
+  { name: "Border-with-surface-neutral-primary", variablePath: "border/border-with-surface-neutral-primary", primitiveSource: "Neutral Scale/7", category: 'border' },
+  { name: "Border-with-surface-secondary", variablePath: "border/border-with-surface-secondary", primitiveSource: "Neutral Scale/8", category: 'border' },
+  { name: "Border-with-bg-brand-primary", variablePath: "border/border-with-bg-brand-primary", primitiveSource: "Brand Scale/11", category: 'border' },
+  { name: "Border-with-bg-brand-primary-subtle", variablePath: "border/border-with-bg-brand-primary-subtle", primitiveSource: "Brand Scale/8", category: 'border' },
+  { name: "Border-with-bg-success", variablePath: "border/border-with-bg-success", primitiveSource: "Success Scale/11", category: 'border' },
+  { name: "Border-with-bg-success-subtle", variablePath: "border/border-with-bg-success-subtle", primitiveSource: "Success Scale/8", category: 'border' },
+  { name: "Border-with-bg-error", variablePath: "border/border-with-bg-error", primitiveSource: "Error Scale/11", category: 'border' },
+  { name: "Border-with-bg-error-subtle", variablePath: "border/border-with-bg-error-subtle", primitiveSource: "Error Scale/8", category: 'border' }
+];
 
-      const lightNeutralTheme: RadixTheme = generateRadixColors({
-        appearance: "light",
-        accent: neutral,
-        gray: "#CCCCCC",
-        background: "#FFFFFF"
-      });
+// Main documentation export function
+async function exportDocumentation(collection: VariableCollection, semanticCollection: VariableCollection | null = null) {
+  try {
+    // Load required fonts
+    await Promise.all([
+      figma.loadFontAsync({ family: "Inter", style: "Regular" }),
+      figma.loadFontAsync({ family: "Inter", style: "Medium" }),
+      figma.loadFontAsync({ family: "Inter", style: "Bold" })
+    ]);
+    
+    // Create main frame
+    const frame = figma.createFrame();
+    frame.name = "CCS Documentation";
+    frame.layoutMode = "VERTICAL";
+    frame.primaryAxisSizingMode = "AUTO";
+    frame.counterAxisSizingMode = "FIXED";
+    frame.resize(800, frame.height);
+    frame.paddingLeft = 80;
+    frame.paddingRight = 80;
+    frame.paddingTop = 80;
+    frame.paddingBottom = 80;
+    frame.itemSpacing = 48;
+    frame.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
 
-      const lightErrorTheme: RadixTheme = generateRadixColors({
-        appearance: "light",
-        accent: error,
-        gray: "#CCCCCC",
-        background: "#FFFFFF"
-      });
+    // Add title
+    const title = figma.createText();
+    title.characters = "Color";
+    title.fontSize = 32;
+    title.fontName = { family: "Inter", style: "Bold" };
+    title.fills = [{ type: 'SOLID', color: { r: 0.2, g: 0.2, b: 0.2 } }];
+    frame.appendChild(title);
 
-      const lightSuccessTheme: RadixTheme = generateRadixColors({
-        appearance: "light",
-        accent: success,
-        gray: "#CCCCCC",
-        background: "#FFFFFF"
-      });
-
-      const darkBrandTheme: RadixTheme = generateRadixColors({
-        appearance: "dark",
-        accent: hexColor,
-        gray: "#555555",
-        background: "#1C1C1C" // Updated from #161616
-      });
-
-      const darkNeutralTheme: RadixTheme = generateRadixColors({
-        appearance: "dark",
-        accent: neutral,
-        gray: "#555555",
-        background: "#1C1C1C" // Updated from #161616
-      });
-
-      const darkErrorTheme: RadixTheme = generateRadixColors({
-        appearance: "dark",
-        accent: error,
-        gray: "#555555",
-        background: "#1C1C1C" // Updated from #161616
-      });
-
-      const darkSuccessTheme: RadixTheme = generateRadixColors({
-        appearance: "dark",
-        accent: success,
-        gray: "#555555",
-        background: "#1C1C1C" // Updated from #161616
-      });
-
-      let primitiveCollection: VariableCollection | null = null;
-      let collection: VariableCollection | null = null;
-      let semanticCollection: VariableCollection | null = null;
-
-      if (includePrimitives) {
-        primitiveCollection = figma.variables.createVariableCollection(`CCS Primitives ${versionNumber}`);
-        semanticCollection = figma.variables.createVariableCollection(`CCS Semantics ${versionNumber}`);
-
-        if (appearance === "light" || appearance === "both") {
-          const lightMode = primitiveCollection.modes[0];
-          primitiveCollection.renameMode(lightMode.modeId, "Light");
-          await createPrimitiveVariables(primitiveCollection, lightMode.modeId, lightBrandTheme, 
-            lightNeutralTheme, lightSuccessTheme, lightErrorTheme);
-        }
-
-        if (appearance === "dark" || appearance === "both") {
-          const darkModeId = appearance === "both" ? 
-            primitiveCollection.addMode("Dark") : primitiveCollection.modes[0].modeId;
-          await createPrimitiveVariables(primitiveCollection, darkModeId, darkBrandTheme, 
-            darkNeutralTheme, darkSuccessTheme, darkErrorTheme);
-        }
-
-        await createSemanticVariables(semanticCollection, primitiveCollection, appearance);
-
-        // Create demo components if enabled
-        if (exportDemo) {
-          await exportDemoComponents(primitiveCollection, semanticCollection);
-        }
-      } else {
-        collection = figma.variables.createVariableCollection(`CCS ${versionNumber}`);
-        
-        if (appearance === "light" || appearance === "both") {
-          const lightMode = collection.modes[0];
-          collection.renameMode(lightMode.modeId, "Light");
-          await createDirectVariables(collection, lightMode.modeId, lightBrandTheme, 
-            lightNeutralTheme, lightSuccessTheme, lightErrorTheme);
-        }
-
-        if (appearance === "dark" || appearance === "both") {
-          const darkModeId = appearance === "both" ? 
-            collection.addMode("Dark") : collection.modes[0].modeId;
-          await createDirectVariables(collection, darkModeId, darkBrandTheme, 
-            darkNeutralTheme, darkSuccessTheme, darkErrorTheme);
-        }
-
-        // Create demo components if enabled
-        if (exportDemo) {
-          await exportDemoComponents(collection);
-        }
-      }
-
-      if (!isClosing) {
-        figma.notify(`Successfully created color system with version ${versionNumber}`);
-        figma.ui.postMessage('complete');
-      }
-    } catch (err) {
-      if (!isClosing) {
-        figma.notify("Error generating variables.");
-        console.error("Error generating variables:", err);
-        figma.ui.postMessage('complete');
-      }
-    } finally {
-      if (!isClosing) {
-        isClosing = true;
-        figma.ui.postMessage('complete');
-        setTimeout(() => {
-          figma.closePlugin();
-        }, 100);
+    // Group items by category
+    const categories = ['surface', 'text', 'icon', 'background', 'border'];
+    
+    for (const category of categories) {
+      const categoryItems = DOCUMENTATION_ITEMS.filter(item => item.category === category);
+      if (categoryItems.length > 0) {
+        const categorySection = await createCategorySection(category, categoryItems, semanticCollection || collection);
+        frame.appendChild(categorySection);
       }
     }
+
+    return frame;
+  } catch (error) {
+    console.error('Error in exportDocumentation:', error);
+    figma.notify('Error creating documentation');
+    throw error;
   }
-};
+}
+
+// Create category section
+async function createCategorySection(category: string, items: DocumentationItem[], collection: VariableCollection): Promise<FrameNode> {
+  const section = figma.createFrame();
+  section.name = `${category.charAt(0).toUpperCase() + category.slice(1)} Section`;
+  section.layoutMode = "VERTICAL";
+  section.primaryAxisSizingMode = "AUTO";
+  section.counterAxisSizingMode = "FIXED";
+  section.resize(640, section.height);
+  section.itemSpacing = 0;
+  section.fills = [];
+
+  // Add category heading
+  const heading = figma.createText();
+  heading.characters = category.charAt(0).toUpperCase() + category.slice(1);
+  heading.fontSize = 20;
+  heading.fontName = { family: "Inter", style: "Bold" };
+  heading.fills = [{ type: 'SOLID', color: { r: 0.2, g: 0.2, b: 0.2 } }];
+  section.appendChild(heading);
+
+  // Add column headers
+  const headerRow = await createHeaderRow(category);
+  section.appendChild(headerRow);
+
+  // Add items
+  for (let i = 0; i < items.length; i++) {
+    const itemRow = await createItemRow(items[i], collection);
+    section.appendChild(itemRow);
+    
+    // Add separator line (except for last item)
+    if (i < items.length - 1) {
+      const separator = figma.createLine();
+      separator.resize(640, 0);
+      separator.strokeWeight = 0.5;
+      separator.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
+      section.appendChild(separator);
+    }
+  }
+
+  return section;
+}
+
+// Create header row
+async function createHeaderRow(category: string): Promise<FrameNode> {
+  const headerRow = figma.createFrame();
+  headerRow.name = "Header Row";
+  headerRow.layoutMode = "HORIZONTAL";
+  headerRow.primaryAxisSizingMode = "FIXED";
+  headerRow.counterAxisSizingMode = "AUTO";
+  headerRow.resize(640, 32);
+  headerRow.itemSpacing = 16;
+  headerRow.fills = [];
+
+  // Style Name header
+  const styleNameHeader = figma.createText();
+  styleNameHeader.characters = "Style Name";
+  styleNameHeader.fontSize = 12;
+  styleNameHeader.fontName = { family: "Inter", style: "Medium" };
+  styleNameHeader.fills = [{ type: 'SOLID', color: { r: 0.4, g: 0.4, b: 0.4 } }];
+  styleNameHeader.resize(200, 16);
+  headerRow.appendChild(styleNameHeader);
+
+  // Primitive header
+  const primitiveHeader = figma.createText();
+  primitiveHeader.characters = category === 'surface' ? "Primitive - Radix" : "Global";
+  primitiveHeader.fontSize = 12;
+  primitiveHeader.fontName = { family: "Inter", style: "Medium" };
+  primitiveHeader.fills = [{ type: 'SOLID', color: { r: 0.4, g: 0.4, b: 0.4 } }];
+  primitiveHeader.resize(200, 16);
+  headerRow.appendChild(primitiveHeader);
+
+  return headerRow;
+}
+
+// Create item row
+async function createItemRow(item: DocumentationItem, collection: VariableCollection): Promise<FrameNode> {
+  const row = figma.createFrame();
+  row.name = `${item.name} Row`;
+  row.layoutMode = "HORIZONTAL";
+  row.primaryAxisSizingMode = "FIXED";
+  row.counterAxisSizingMode = "AUTO";
+  row.resize(640, 48);
+  row.itemSpacing = 16;
+  row.fills = [];
+
+  // Color swatch
+  const swatch = figma.createFrame();
+  swatch.name = `${item.name} Swatch`;
+  swatch.resize(24, 24);
+  swatch.cornerRadius = 4;
+  swatch.strokeWeight = 0.5;
+  swatch.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
+  
+  // Apply variable color to swatch
+  await applyVariableWithFallback(swatch, collection, item.variablePath, 'backgrounds');
+  
+  row.appendChild(swatch);
+
+  // Style name
+  const styleName = figma.createText();
+  styleName.characters = item.name;
+  styleName.fontSize = 14;
+  styleName.fontName = { family: "Inter", style: "Regular" };
+  styleName.fills = [{ type: 'SOLID', color: { r: 0.2, g: 0.2, b: 0.2 } }];
+  styleName.resize(200, 20);
+  row.appendChild(styleName);
+
+  // Primitive source badge
+  const primitiveBadge = figma.createFrame();
+  primitiveBadge.name = `${item.name} Primitive Badge`;
+  primitiveBadge.layoutMode = "HORIZONTAL";
+  primitiveBadge.primaryAxisSizingMode = "AUTO";
+  primitiveBadge.counterAxisSizingMode = "AUTO";
+  primitiveBadge.paddingLeft = 8;
+  primitiveBadge.paddingRight = 8;
+  primitiveBadge.paddingTop = 4;
+  primitiveBadge.paddingBottom = 4;
+  primitiveBadge.cornerRadius = 6;
+  primitiveBadge.fills = [{ type: 'SOLID', color: { r: 0.95, g: 0.95, b: 0.95 } }];
+
+  const primitiveText = figma.createText();
+  primitiveText.characters = item.primitiveSource;
+  primitiveText.fontSize = 12;
+  primitiveText.fontName = { family: "Inter", style: "Regular" };
+  primitiveText.fills = [{ type: 'SOLID', color: { r: 0.4, g: 0.4, b: 0.4 } }];
+  primitiveBadge.appendChild(primitiveText);
+
+  row.appendChild(primitiveBadge);
+
+  return row;
+}
 
