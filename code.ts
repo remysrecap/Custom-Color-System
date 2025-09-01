@@ -1737,6 +1737,21 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
     // Apply surface color variable to frame background
     await applyVariableWithFallback(frame, collection, "surface/surface-neutral-primary", 'backgrounds');
 
+    // Create title container
+    const titleContainer = figma.createFrame();
+    titleContainer.name = "Title Container";
+    titleContainer.layoutMode = "HORIZONTAL";
+    titleContainer.primaryAxisSizingMode = "AUTO";
+    titleContainer.counterAxisSizingMode = "AUTO";
+    titleContainer.paddingLeft = 120;
+    titleContainer.paddingRight = 120;
+    titleContainer.paddingTop = 88;
+    titleContainer.paddingBottom = 24;
+    titleContainer.itemSpacing = 0;
+    // Apply surface-neutral-secondary background
+    await applyVariableWithFallback(titleContainer, collection, "surface/surface-neutral-secondary", 'backgrounds');
+    frame.appendChild(titleContainer);
+
     // Add title
     const title = figma.createText();
     title.characters = "Color";
@@ -1745,7 +1760,7 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
     title.textAutoResize = "HEIGHT";
     // Apply text color variable
     await applyVariableWithFallback(title, collection, "text/text-neutral-primary", 'text');
-    frame.appendChild(title);
+    titleContainer.appendChild(title);
 
     // Group items by category
     const categories = ['surface', 'text', 'icon', 'background', 'border'];
@@ -1818,7 +1833,7 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   headerRow.primaryAxisSizingMode = "FIXED";
   headerRow.counterAxisSizingMode = "AUTO";
   headerRow.resize(900, 32);
-  headerRow.itemSpacing = 16;
+  headerRow.itemSpacing = 56; // Increased to account for swatch width (24px) + spacing (16px) = 40px, plus 16px original spacing
   headerRow.fills = [];
 
   // Style Name header
@@ -1853,7 +1868,9 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   row.layoutMode = "HORIZONTAL";
   row.primaryAxisSizingMode = "FIXED";
   row.counterAxisSizingMode = "AUTO";
-  row.resize(900, 48);
+  row.resize(900, row.height);
+  row.paddingTop = 12;
+  row.paddingBottom = 12;
   row.itemSpacing = 16;
   row.fills = [];
 
@@ -1862,12 +1879,29 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   swatch.name = `${item.name} Swatch`;
   swatch.resize(24, 24);
   swatch.cornerRadius = 4;
-  swatch.strokeWeight = 0.5;
-  // Apply border color variable
-  await applyVariableWithFallback(swatch, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
   
-  // Apply variable color to swatch
-  await applyVariableWithFallback(swatch, collection, item.variablePath, 'backgrounds');
+  // Handle border swatches differently
+  if (item.category === 'border') {
+    swatch.strokeWeight = 2;
+    // Apply border color variable
+    await applyVariableWithFallback(swatch, collection, item.variablePath, 'backgrounds');
+    // Apply appropriate fill based on the border style
+    if (item.name.includes('brand')) {
+      await applyVariableWithFallback(swatch, collection, "surface/surface-brand-primary", 'backgrounds');
+    } else if (item.name.includes('success')) {
+      await applyVariableWithFallback(swatch, collection, "surface/surface-success-primary", 'backgrounds');
+    } else if (item.name.includes('error')) {
+      await applyVariableWithFallback(swatch, collection, "surface/surface-error-primary", 'backgrounds');
+    } else {
+      await applyVariableWithFallback(swatch, collection, "surface/surface-neutral-primary", 'backgrounds');
+    }
+  } else {
+    swatch.strokeWeight = 0.5;
+    // Apply border color variable
+    await applyVariableWithFallback(swatch, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
+    // Apply variable color to swatch
+    await applyVariableWithFallback(swatch, collection, item.variablePath, 'backgrounds');
+  }
   
   row.appendChild(swatch);
 
