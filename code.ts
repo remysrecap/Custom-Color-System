@@ -1749,6 +1749,9 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
     titleContainer.itemSpacing = 0;
     // Set width to fill container
     titleContainer.resize(1140, titleContainer.height);
+    // Use layoutGrow to fill container
+    titleContainer.layoutGrow = 1;
+    titleContainer.layoutAlign = "STRETCH";
     // Apply surface-neutral-secondary background
     await applyVariableWithFallback(titleContainer, collection, "surface/surface-neutral-secondary", 'backgrounds');
     frame.appendChild(titleContainer);
@@ -1855,6 +1858,9 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   headerRow.fills = [];
   // Set width to fill container
   headerRow.resize(1100, headerRow.height);
+  // Use layoutGrow to fill container
+  headerRow.layoutGrow = 1;
+  headerRow.layoutAlign = "STRETCH";
 
   // Style Name header
   const styleNameHeader = figma.createText();
@@ -1907,6 +1913,9 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   row.fills = [];
   // Set width to fill container
   row.resize(1100, row.height);
+  // Use layoutGrow to fill container
+  row.layoutGrow = 1;
+  row.layoutAlign = "STRETCH";
 
   // Color swatch
   const swatch = figma.createFrame();
