@@ -1851,7 +1851,7 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   headerRow.counterAxisSizingMode = "AUTO";
   headerRow.paddingTop = 24;
   headerRow.paddingBottom = 8;
-  headerRow.itemSpacing = 56; // Increased to account for swatch width (24px) + spacing (16px) = 40px, plus 16px original spacing
+  headerRow.itemSpacing = 16;
   headerRow.fills = [];
   // Set width to fill container
   headerRow.resize(1100, headerRow.height);
@@ -1862,7 +1862,7 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   styleNameHeader.fontSize = 12;
   styleNameHeader.fontName = { family: "Inter", style: "Medium" };
   styleNameHeader.textAutoResize = "HEIGHT";
-  styleNameHeader.resize(400, 16);
+  styleNameHeader.resize(440, 16);
   // Apply text color variable
   await applyVariableWithFallback(styleNameHeader, collection, "text/text-neutral-secondary", 'text');
   headerRow.appendChild(styleNameHeader);
@@ -1935,18 +1935,29 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
     await applyVariableWithFallback(swatch, collection, item.variablePath, 'backgrounds');
   }
   
-  row.appendChild(swatch);
-
   // Style name
   const styleName = figma.createText();
   styleName.characters = item.name;
   styleName.fontSize = 14;
   styleName.fontName = { family: "Inter", style: "Regular" };
   styleName.textAutoResize = "HEIGHT";
-  styleName.resize(400, 20);
+  styleName.resize(440, 20);
   // Apply text color variable
   await applyVariableWithFallback(styleName, collection, "text/text-neutral-primary", 'text');
-  row.appendChild(styleName);
+  
+  // Create auto-layout frame for swatch and style name
+  const styleContainer = figma.createFrame();
+  styleContainer.name = `${item.name} Style Container`;
+  styleContainer.layoutMode = "HORIZONTAL";
+  styleContainer.primaryAxisSizingMode = "AUTO";
+  styleContainer.counterAxisSizingMode = "AUTO";
+  styleContainer.itemSpacing = 16;
+  styleContainer.fills = [];
+  
+  styleContainer.appendChild(swatch);
+  styleContainer.appendChild(styleName);
+  
+  row.appendChild(styleContainer);
 
   // Primitive source badge
   const primitiveBadge = figma.createFrame();
@@ -1959,8 +1970,6 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   primitiveBadge.paddingTop = 4;
   primitiveBadge.paddingBottom = 4;
   primitiveBadge.cornerRadius = 6;
-  // Set width to fill container
-  primitiveBadge.resize(300, primitiveBadge.height);
   // Apply background color variable
   await applyVariableWithFallback(primitiveBadge, collection, "surface/surface-neutral-secondary", 'backgrounds');
 
@@ -1973,7 +1982,18 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   await applyVariableWithFallback(primitiveText, collection, "text/text-neutral-secondary", 'text');
   primitiveBadge.appendChild(primitiveText);
 
-  row.appendChild(primitiveBadge);
+  // Create parent frame for primitive badge
+  const primitiveContainer = figma.createFrame();
+  primitiveContainer.name = `${item.name} Primitive Container`;
+  primitiveContainer.layoutMode = "HORIZONTAL";
+  primitiveContainer.primaryAxisSizingMode = "AUTO";
+  primitiveContainer.counterAxisSizingMode = "AUTO";
+  primitiveContainer.fills = [];
+  // Set width to fill container
+  primitiveContainer.resize(300, primitiveContainer.height);
+  
+  primitiveContainer.appendChild(primitiveBadge);
+  row.appendChild(primitiveContainer);
 
   // Hex Value badge
   const hexValueBadge = figma.createFrame();
@@ -2000,7 +2020,18 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   await applyVariableWithFallback(hexValueText, collection, "text/text-neutral-secondary", 'text');
   hexValueBadge.appendChild(hexValueText);
 
-  row.appendChild(hexValueBadge);
+  // Create parent frame for hex value badge
+  const hexValueContainer = figma.createFrame();
+  hexValueContainer.name = `${item.name} Hex Value Container`;
+  hexValueContainer.layoutMode = "HORIZONTAL";
+  hexValueContainer.primaryAxisSizingMode = "AUTO";
+  hexValueContainer.counterAxisSizingMode = "AUTO";
+  hexValueContainer.fills = [];
+  // Set width to fill container
+  hexValueContainer.resize(300, hexValueContainer.height);
+  
+  hexValueContainer.appendChild(hexValueBadge);
+  row.appendChild(hexValueContainer);
 
   return row;
 }
