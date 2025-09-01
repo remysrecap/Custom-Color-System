@@ -1801,7 +1801,7 @@ async function createCategorySection(category: string, items: DocumentationItem[
   if (!isFirstSection) {
     // Create a separator line for the top border
     const separator = figma.createLine();
-    separator.resize(separator.width, 0);
+    separator.resize(1140, 0);
     separator.strokeWeight = 0.75;
     separator.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
     await applyVariableWithFallback(separator, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
@@ -1831,7 +1831,7 @@ async function createCategorySection(category: string, items: DocumentationItem[
     // Add separator line (except for last item)
     if (i < items.length - 1) {
       const separator = figma.createLine();
-      separator.resize(separator.width, 0);
+      separator.resize(900, 0);
       separator.strokeWeight = 0.75;
       separator.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
       await applyVariableWithFallback(separator, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
