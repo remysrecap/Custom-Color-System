@@ -1728,10 +1728,10 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
     frame.primaryAxisSizingMode = "AUTO";
     frame.counterAxisSizingMode = "FIXED";
     frame.resize(1140, frame.height);
-    frame.paddingLeft = 120;
-    frame.paddingRight = 120;
-    frame.paddingTop = 96;
-    frame.paddingBottom = 56;
+    frame.paddingLeft = 0;
+    frame.paddingRight = 0;
+    frame.paddingTop = 0;
+    frame.paddingBottom = 80;
     frame.itemSpacing = 40;
     
     // Apply surface color variable to frame background
@@ -1787,8 +1787,9 @@ async function createCategorySection(category: string, items: DocumentationItem[
   section.name = `${category.charAt(0).toUpperCase() + category.slice(1)} Section`;
   section.layoutMode = "VERTICAL";
   section.primaryAxisSizingMode = "AUTO";
-  section.counterAxisSizingMode = "FIXED";
-  section.resize(900, section.height);
+  section.counterAxisSizingMode = "AUTO";
+  section.paddingLeft = 120;
+  section.paddingRight = 120;
   section.itemSpacing = 0;
   section.fills = [];
 
@@ -1814,7 +1815,7 @@ async function createCategorySection(category: string, items: DocumentationItem[
     // Add separator line (except for last item)
     if (i < items.length - 1) {
       const separator = figma.createLine();
-      separator.resize(900, 0);
+      separator.resize(separator.width, 0);
       separator.strokeWeight = 0.5;
       // Apply border color variable
       await applyVariableWithFallback(separator, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
@@ -1830,9 +1831,8 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   const headerRow = figma.createFrame();
   headerRow.name = "Header Row";
   headerRow.layoutMode = "HORIZONTAL";
-  headerRow.primaryAxisSizingMode = "FIXED";
+  headerRow.primaryAxisSizingMode = "AUTO";
   headerRow.counterAxisSizingMode = "AUTO";
-  headerRow.resize(900, 32);
   headerRow.itemSpacing = 56; // Increased to account for swatch width (24px) + spacing (16px) = 40px, plus 16px original spacing
   headerRow.fills = [];
 
@@ -1866,11 +1866,10 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   const row = figma.createFrame();
   row.name = `${item.name} Row`;
   row.layoutMode = "HORIZONTAL";
-  row.primaryAxisSizingMode = "FIXED";
+  row.primaryAxisSizingMode = "AUTO";
   row.counterAxisSizingMode = "AUTO";
-  row.resize(900, row.height);
-  row.paddingTop = 12;
-  row.paddingBottom = 12;
+  row.paddingTop = 24;
+  row.paddingBottom = 24;
   row.itemSpacing = 16;
   row.fills = [];
 
