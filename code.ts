@@ -1899,9 +1899,11 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   row.layoutMode = "HORIZONTAL";
   row.primaryAxisSizingMode = "AUTO";
   row.counterAxisSizingMode = "AUTO";
+  row.primaryAxisAlignItems = "CENTER"; // children centered vertically
+  row.counterAxisAlignItems = "MIN"; // still left aligned
   row.paddingTop = 24;
   row.paddingBottom = 24;
-  row.itemSpacing = 16;
+  row.itemSpacing = 14;
   row.fills = [];
   // Set width to fill container
   row.resize(1100, row.height);
