@@ -1799,9 +1799,13 @@ async function createCategorySection(category: string, items: DocumentationItem[
   
   // Add top border for all sections except the first
   if (!isFirstSection) {
-    section.strokeWeight = 0.75;
-    section.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
-    await applyVariableWithFallback(section, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
+    // Create a line for the top border
+    const topBorder = figma.createLine();
+    topBorder.resize(section.width, 0);
+    topBorder.strokeWeight = 0.75;
+    topBorder.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
+    await applyVariableWithFallback(topBorder, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
+    section.appendChild(topBorder);
   }
 
   // Add category heading
@@ -1881,9 +1885,13 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   
   // Add bottom border for all rows except the last item
   if (!isLastItem) {
-    row.strokeWeight = 0.75;
-    row.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
-    await applyVariableWithFallback(row, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
+    // Create a line for the bottom border
+    const bottomBorder = figma.createLine();
+    bottomBorder.resize(row.width, 0);
+    bottomBorder.strokeWeight = 0.75;
+    bottomBorder.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
+    await applyVariableWithFallback(bottomBorder, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
+    row.appendChild(bottomBorder);
   }
 
   // Color swatch
