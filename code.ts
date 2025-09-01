@@ -1953,7 +1953,7 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   styleContainer.primaryAxisSizingMode = "FIXED";
   styleContainer.counterAxisSizingMode = "AUTO";
   styleContainer.primaryAxisAlignItems = "MIN"; // left aligned
-  styleContainer.counterAxisAlignItems = "CENTER"; // middle aligned vertically
+  styleContainer.counterAxisAlignItems = "MIN"; // top aligned (equivalent to "Align left" in screenshot)
   styleContainer.itemSpacing = 16;
   styleContainer.fills = [];
   // Set width to fixed 440px
