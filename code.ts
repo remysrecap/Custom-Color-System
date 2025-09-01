@@ -1732,7 +1732,7 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
     frame.paddingRight = 0;
     frame.paddingTop = 0;
     frame.paddingBottom = 80;
-    frame.itemSpacing = 40;
+    frame.itemSpacing = 0;
     
     // Apply surface color variable to frame background
     await applyVariableWithFallback(frame, collection, "surface/surface-neutral-primary", 'backgrounds');
@@ -1765,10 +1765,12 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
     // Group items by category
     const categories = ['surface', 'text', 'icon', 'background', 'border'];
     
-    for (const category of categories) {
+    for (let i = 0; i < categories.length; i++) {
+      const category = categories[i];
       const categoryItems = DOCUMENTATION_ITEMS.filter(item => item.category === category);
       if (categoryItems.length > 0) {
-        const categorySection = await createCategorySection(category, categoryItems, semanticCollection || collection);
+        const isFirstSection = i === 0;
+        const categorySection = await createCategorySection(category, categoryItems, semanticCollection || collection, isFirstSection);
         frame.appendChild(categorySection);
       }
     }
@@ -1782,7 +1784,7 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
 }
 
 // Create category section
-async function createCategorySection(category: string, items: DocumentationItem[], collection: VariableCollection): Promise<FrameNode> {
+async function createCategorySection(category: string, items: DocumentationItem[], collection: VariableCollection, isFirstSection: boolean = false): Promise<FrameNode> {
   const section = figma.createFrame();
   section.name = `${category.charAt(0).toUpperCase() + category.slice(1)} Section`;
   section.layoutMode = "VERTICAL";
@@ -1790,8 +1792,15 @@ async function createCategorySection(category: string, items: DocumentationItem[
   section.counterAxisSizingMode = "AUTO";
   section.paddingLeft = 120;
   section.paddingRight = 120;
+  section.paddingTop = isFirstSection ? 0 : 40;
   section.itemSpacing = 0;
   section.fills = [];
+  
+  // Add top border for all sections except the first
+  if (!isFirstSection) {
+    section.strokeWeight = 0.75;
+    await applyVariableWithFallback(section, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
+  }
 
   // Add category heading
   const heading = figma.createText();
@@ -1809,18 +1818,9 @@ async function createCategorySection(category: string, items: DocumentationItem[
 
   // Add items
   for (let i = 0; i < items.length; i++) {
-    const itemRow = await createItemRow(items[i], collection);
+    const isLastItem = i === items.length - 1;
+    const itemRow = await createItemRow(items[i], collection, isLastItem);
     section.appendChild(itemRow);
-    
-    // Add separator line (except for last item)
-    if (i < items.length - 1) {
-      const separator = figma.createLine();
-      separator.resize(separator.width, 0);
-      separator.strokeWeight = 0.5;
-      // Apply border color variable
-      await applyVariableWithFallback(separator, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
-      section.appendChild(separator);
-    }
   }
 
   return section;
@@ -1833,6 +1833,8 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   headerRow.layoutMode = "HORIZONTAL";
   headerRow.primaryAxisSizingMode = "AUTO";
   headerRow.counterAxisSizingMode = "AUTO";
+  headerRow.paddingTop = 24;
+  headerRow.paddingBottom = 8;
   headerRow.itemSpacing = 56; // Increased to account for swatch width (24px) + spacing (16px) = 40px, plus 16px original spacing
   headerRow.fills = [];
 
@@ -1862,7 +1864,7 @@ async function createHeaderRow(category: string, collection: VariableCollection)
 }
 
 // Create item row
-async function createItemRow(item: DocumentationItem, collection: VariableCollection): Promise<FrameNode> {
+async function createItemRow(item: DocumentationItem, collection: VariableCollection, isLastItem: boolean = false): Promise<FrameNode> {
   const row = figma.createFrame();
   row.name = `${item.name} Row`;
   row.layoutMode = "HORIZONTAL";
@@ -1872,6 +1874,12 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   row.paddingBottom = 24;
   row.itemSpacing = 16;
   row.fills = [];
+  
+  // Add bottom border for all rows except the last item
+  if (!isLastItem) {
+    row.strokeWeight = 0.75;
+    await applyVariableWithFallback(row, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
+  }
 
   // Color swatch
   const swatch = figma.createFrame();
