@@ -1900,7 +1900,7 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   row.primaryAxisSizingMode = "AUTO";
   row.counterAxisSizingMode = "AUTO";
   row.primaryAxisAlignItems = "MIN"; // left aligned
-  row.counterAxisAlignItems = "CENTER"; // middle aligned vertically (equivalent to "Align left" in screenshot)
+  row.counterAxisAlignItems = "MIN"; // top aligned (equivalent to "Align left" in screenshot)
   row.paddingTop = 24;
   row.paddingBottom = 24;
   row.itemSpacing = 14;
