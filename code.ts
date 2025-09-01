@@ -1941,7 +1941,8 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   styleName.fontSize = 14;
   styleName.fontName = { family: "Inter", style: "Regular" };
   styleName.textAutoResize = "HEIGHT";
-  styleName.resize(440, 20);
+  // Set width to fill container
+  styleName.resize(400, 20);
   // Apply text color variable
   await applyVariableWithFallback(styleName, collection, "text/text-neutral-primary", 'text');
   
@@ -1949,10 +1950,12 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   const styleContainer = figma.createFrame();
   styleContainer.name = `${item.name} Style Container`;
   styleContainer.layoutMode = "HORIZONTAL";
-  styleContainer.primaryAxisSizingMode = "AUTO";
+  styleContainer.primaryAxisSizingMode = "FIXED";
   styleContainer.counterAxisSizingMode = "AUTO";
   styleContainer.itemSpacing = 16;
   styleContainer.fills = [];
+  // Set width to fixed 440px
+  styleContainer.resize(440, styleContainer.height);
   
   styleContainer.appendChild(swatch);
   styleContainer.appendChild(styleName);
@@ -2006,8 +2009,6 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   hexValueBadge.paddingTop = 4;
   hexValueBadge.paddingBottom = 4;
   hexValueBadge.cornerRadius = 6;
-  // Set width to fill container
-  hexValueBadge.resize(300, hexValueBadge.height);
   // Apply background color variable
   await applyVariableWithFallback(hexValueBadge, collection, "surface/surface-neutral-secondary", 'backgrounds');
 
