@@ -1793,13 +1793,14 @@ async function createCategorySection(category: string, items: DocumentationItem[
   section.counterAxisSizingMode = "AUTO";
   section.paddingLeft = 120;
   section.paddingRight = 120;
-  section.paddingTop = isFirstSection ? 0 : 40;
+  section.paddingTop = isFirstSection ? 40 : 40;
   section.itemSpacing = 0;
   section.fills = [];
   
   // Add top border for all sections except the first
   if (!isFirstSection) {
     section.strokeWeight = 0.75;
+    section.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
     await applyVariableWithFallback(section, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
   }
 
@@ -1881,6 +1882,7 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   // Add bottom border for all rows except the last item
   if (!isLastItem) {
     row.strokeWeight = 0.75;
+    row.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
     await applyVariableWithFallback(row, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
   }
 
