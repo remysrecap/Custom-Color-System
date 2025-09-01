@@ -1853,6 +1853,8 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   headerRow.paddingBottom = 8;
   headerRow.itemSpacing = 56; // Increased to account for swatch width (24px) + spacing (16px) = 40px, plus 16px original spacing
   headerRow.fills = [];
+  // Set width to fill container
+  headerRow.resize(1100, headerRow.height);
 
   // Style Name header
   const styleNameHeader = figma.createText();
@@ -1882,7 +1884,7 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   hexValueHeader.fontSize = 12;
   hexValueHeader.fontName = { family: "Inter", style: "Medium" };
   hexValueHeader.textAutoResize = "HEIGHT";
-  hexValueHeader.resize(200, 16);
+  hexValueHeader.resize(300, 16);
   // Apply text color variable
   await applyVariableWithFallback(hexValueHeader, collection, "text/text-neutral-secondary", 'text');
   headerRow.appendChild(hexValueHeader);
@@ -1957,6 +1959,8 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   primitiveBadge.paddingTop = 4;
   primitiveBadge.paddingBottom = 4;
   primitiveBadge.cornerRadius = 6;
+  // Set width to fill container
+  primitiveBadge.resize(300, primitiveBadge.height);
   // Apply background color variable
   await applyVariableWithFallback(primitiveBadge, collection, "surface/surface-neutral-secondary", 'backgrounds');
 
@@ -1982,6 +1986,8 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   hexValueBadge.paddingTop = 4;
   hexValueBadge.paddingBottom = 4;
   hexValueBadge.cornerRadius = 6;
+  // Set width to fill container
+  hexValueBadge.resize(300, hexValueBadge.height);
   // Apply background color variable
   await applyVariableWithFallback(hexValueBadge, collection, "surface/surface-neutral-secondary", 'backgrounds');
 
