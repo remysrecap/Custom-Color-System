@@ -1747,6 +1747,8 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
     titleContainer.paddingTop = 88;
     titleContainer.paddingBottom = 24;
     titleContainer.itemSpacing = 0;
+    // Set width to fill container
+    titleContainer.resize(1140, titleContainer.height);
     // Apply surface-neutral-secondary background
     await applyVariableWithFallback(titleContainer, collection, "surface/surface-neutral-secondary", 'backgrounds');
     frame.appendChild(titleContainer);
@@ -1873,6 +1875,8 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   row.paddingBottom = 24;
   row.itemSpacing = 16;
   row.fills = [];
+  // Set width to fill container
+  row.resize(900, row.height);
   
   // Add bottom border for all rows except the last item
   if (!isLastItem) {
