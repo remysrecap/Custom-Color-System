@@ -1727,20 +1727,24 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
     frame.layoutMode = "VERTICAL";
     frame.primaryAxisSizingMode = "AUTO";
     frame.counterAxisSizingMode = "FIXED";
-    frame.resize(800, frame.height);
-    frame.paddingLeft = 80;
-    frame.paddingRight = 80;
-    frame.paddingTop = 80;
-    frame.paddingBottom = 80;
-    frame.itemSpacing = 48;
-    frame.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
+    frame.resize(1140, frame.height);
+    frame.paddingLeft = 120;
+    frame.paddingRight = 120;
+    frame.paddingTop = 96;
+    frame.paddingBottom = 56;
+    frame.itemSpacing = 40;
+    
+    // Apply surface color variable to frame background
+    await applyVariableWithFallback(frame, collection, "surface/surface-neutral-primary", 'backgrounds');
 
     // Add title
     const title = figma.createText();
     title.characters = "Color";
     title.fontSize = 32;
     title.fontName = { family: "Inter", style: "Bold" };
-    title.fills = [{ type: 'SOLID', color: { r: 0.2, g: 0.2, b: 0.2 } }];
+    title.textAutoResize = "HEIGHT";
+    // Apply text color variable
+    await applyVariableWithFallback(title, collection, "text/text-neutral-primary", 'text');
     frame.appendChild(title);
 
     // Group items by category
@@ -1769,7 +1773,7 @@ async function createCategorySection(category: string, items: DocumentationItem[
   section.layoutMode = "VERTICAL";
   section.primaryAxisSizingMode = "AUTO";
   section.counterAxisSizingMode = "FIXED";
-  section.resize(640, section.height);
+  section.resize(900, section.height);
   section.itemSpacing = 0;
   section.fills = [];
 
@@ -1778,11 +1782,13 @@ async function createCategorySection(category: string, items: DocumentationItem[
   heading.characters = category.charAt(0).toUpperCase() + category.slice(1);
   heading.fontSize = 20;
   heading.fontName = { family: "Inter", style: "Bold" };
-  heading.fills = [{ type: 'SOLID', color: { r: 0.2, g: 0.2, b: 0.2 } }];
+  heading.textAutoResize = "HEIGHT";
+  // Apply text color variable
+  await applyVariableWithFallback(heading, collection, "text/text-neutral-primary", 'text');
   section.appendChild(heading);
 
   // Add column headers
-  const headerRow = await createHeaderRow(category);
+  const headerRow = await createHeaderRow(category, collection);
   section.appendChild(headerRow);
 
   // Add items
@@ -1793,9 +1799,10 @@ async function createCategorySection(category: string, items: DocumentationItem[
     // Add separator line (except for last item)
     if (i < items.length - 1) {
       const separator = figma.createLine();
-      separator.resize(640, 0);
+      separator.resize(900, 0);
       separator.strokeWeight = 0.5;
-      separator.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
+      // Apply border color variable
+      await applyVariableWithFallback(separator, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
       section.appendChild(separator);
     }
   }
@@ -1804,13 +1811,13 @@ async function createCategorySection(category: string, items: DocumentationItem[
 }
 
 // Create header row
-async function createHeaderRow(category: string): Promise<FrameNode> {
+async function createHeaderRow(category: string, collection: VariableCollection): Promise<FrameNode> {
   const headerRow = figma.createFrame();
   headerRow.name = "Header Row";
   headerRow.layoutMode = "HORIZONTAL";
   headerRow.primaryAxisSizingMode = "FIXED";
   headerRow.counterAxisSizingMode = "AUTO";
-  headerRow.resize(640, 32);
+  headerRow.resize(900, 32);
   headerRow.itemSpacing = 16;
   headerRow.fills = [];
 
@@ -1819,8 +1826,10 @@ async function createHeaderRow(category: string): Promise<FrameNode> {
   styleNameHeader.characters = "Style Name";
   styleNameHeader.fontSize = 12;
   styleNameHeader.fontName = { family: "Inter", style: "Medium" };
-  styleNameHeader.fills = [{ type: 'SOLID', color: { r: 0.4, g: 0.4, b: 0.4 } }];
-  styleNameHeader.resize(200, 16);
+  styleNameHeader.textAutoResize = "HEIGHT";
+  styleNameHeader.resize(400, 16);
+  // Apply text color variable
+  await applyVariableWithFallback(styleNameHeader, collection, "text/text-neutral-secondary", 'text');
   headerRow.appendChild(styleNameHeader);
 
   // Primitive header
@@ -1828,8 +1837,10 @@ async function createHeaderRow(category: string): Promise<FrameNode> {
   primitiveHeader.characters = category === 'surface' ? "Primitive - Radix" : "Global";
   primitiveHeader.fontSize = 12;
   primitiveHeader.fontName = { family: "Inter", style: "Medium" };
-  primitiveHeader.fills = [{ type: 'SOLID', color: { r: 0.4, g: 0.4, b: 0.4 } }];
-  primitiveHeader.resize(200, 16);
+  primitiveHeader.textAutoResize = "HEIGHT";
+  primitiveHeader.resize(400, 16);
+  // Apply text color variable
+  await applyVariableWithFallback(primitiveHeader, collection, "text/text-neutral-secondary", 'text');
   headerRow.appendChild(primitiveHeader);
 
   return headerRow;
@@ -1842,7 +1853,7 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   row.layoutMode = "HORIZONTAL";
   row.primaryAxisSizingMode = "FIXED";
   row.counterAxisSizingMode = "AUTO";
-  row.resize(640, 48);
+  row.resize(900, 48);
   row.itemSpacing = 16;
   row.fills = [];
 
@@ -1852,7 +1863,8 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   swatch.resize(24, 24);
   swatch.cornerRadius = 4;
   swatch.strokeWeight = 0.5;
-  swatch.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
+  // Apply border color variable
+  await applyVariableWithFallback(swatch, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
   
   // Apply variable color to swatch
   await applyVariableWithFallback(swatch, collection, item.variablePath, 'backgrounds');
@@ -1864,8 +1876,10 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   styleName.characters = item.name;
   styleName.fontSize = 14;
   styleName.fontName = { family: "Inter", style: "Regular" };
-  styleName.fills = [{ type: 'SOLID', color: { r: 0.2, g: 0.2, b: 0.2 } }];
-  styleName.resize(200, 20);
+  styleName.textAutoResize = "HEIGHT";
+  styleName.resize(400, 20);
+  // Apply text color variable
+  await applyVariableWithFallback(styleName, collection, "text/text-neutral-primary", 'text');
   row.appendChild(styleName);
 
   // Primitive source badge
@@ -1879,13 +1893,16 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   primitiveBadge.paddingTop = 4;
   primitiveBadge.paddingBottom = 4;
   primitiveBadge.cornerRadius = 6;
-  primitiveBadge.fills = [{ type: 'SOLID', color: { r: 0.95, g: 0.95, b: 0.95 } }];
+  // Apply background color variable
+  await applyVariableWithFallback(primitiveBadge, collection, "surface/surface-neutral-secondary", 'backgrounds');
 
   const primitiveText = figma.createText();
   primitiveText.characters = item.primitiveSource;
   primitiveText.fontSize = 12;
   primitiveText.fontName = { family: "Inter", style: "Regular" };
-  primitiveText.fills = [{ type: 'SOLID', color: { r: 0.4, g: 0.4, b: 0.4 } }];
+  primitiveText.textAutoResize = "HEIGHT";
+  // Apply text color variable
+  await applyVariableWithFallback(primitiveText, collection, "text/text-neutral-secondary", 'text');
   primitiveBadge.appendChild(primitiveText);
 
   row.appendChild(primitiveBadge);
