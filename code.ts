@@ -1726,8 +1726,7 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
     frame.name = "CCS Documentation";
     frame.layoutMode = "VERTICAL";
     frame.primaryAxisSizingMode = "AUTO";
-    frame.counterAxisSizingMode = "FIXED";
-    frame.resize(1140, frame.height);
+    frame.counterAxisSizingMode = "AUTO";
     frame.paddingLeft = 0;
     frame.paddingRight = 0;
     frame.paddingTop = 0;
