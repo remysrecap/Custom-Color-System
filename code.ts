@@ -161,6 +161,10 @@ async function findExistingVariable(collection: VariableCollection, name: string
   return null;
 }
 
+
+
+
+
 // Utility function to create or update a color variable with a specific value
 async function createOrUpdateColorVariableWithValue(collection: VariableCollection, modeId: string, name: string, value: RGBA): Promise<Variable | null> {
   console.log(`Attempting to create or update color variable: ${name} with value: ${JSON.stringify(value)}`);
@@ -678,8 +682,8 @@ async function createSemanticVariables(
 
   // Border variables
   await Promise.all([
-    createSemanticVar("border/border-with-surface-neutral-primary", "Neutral Scale/7"), // Updated from border-with-any-surface
-    createSemanticVar("border/border-with-surface-secondary", "Neutral Scale/8"), // Updated from border-with-any-surface-emphasized
+    createSemanticVar("border/border-with-surface-neutral", "Neutral Scale/7"), // Updated from border-with-any-surface
+    createSemanticVar("border/border-with-surface-neutral-emphasized", "Neutral Scale/8"), // Updated from border-with-any-surface-emphasized
     createSemanticVar("border/border-with-bg-brand-primary", "Brand Scale/11"), // Updated from border-with-bg-primary
     createSemanticVar("border/border-with-bg-brand-primary-subtle", "Brand Scale/8"), // Updated from border-with-bg-primary-subtle
     createSemanticVar("border/border-with-bg-success", "Success Scale/11"), // Updated from border-with-success
@@ -744,24 +748,24 @@ async function createDirectVariables(
   // Background variables
   await Promise.all([
     createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary", brandTheme.accentScale[8]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-strong", brandTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-emphasized", brandTheme.accentScale[9]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle", brandTheme.accentScale[2]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle-strong", brandTheme.accentScale[3]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle-emphasized", brandTheme.accentScale[3]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-overlay", brandTheme.accentScaleAlpha[5]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-error", errorTheme.accentScale[8]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-error-strong", errorTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-error-emphasized", errorTheme.accentScale[9]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle", errorTheme.accentScale[2]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle-strong", errorTheme.accentScale[3]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle-emphasized", errorTheme.accentScale[3]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-success", successTheme.accentScale[8]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-success-strong", successTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-success-emphasized", successTheme.accentScale[9]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle", successTheme.accentScale[2]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle-strong", successTheme.accentScale[3])
+    createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle-emphasized", successTheme.accentScale[3])
   ]);
 
   // Border variables
   await Promise.all([
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-surface-neutral-primary", neutralTheme.accentScale[6]), // Updated from border-with-any-surface
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-surface-secondary", neutralTheme.accentScale[7]), // Updated from border-with-any-surface-focus
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-surface-neutral", neutralTheme.accentScale[6]), // Updated from border-with-any-surface
+    createOrUpdateColorVariable(collection, modeId, "border/border-with-surface-neutral-emphasized", neutralTheme.accentScale[7]), // Updated from border-with-any-surface-focus
     createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-brand-primary", brandTheme.accentScale[10]), // Updated from border-with-bg-primary
     createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-brand-primary-subtle", brandTheme.accentScale[7]), // Updated from border-with-bg-primary-subtle
     createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-success", successTheme.accentScale[10]), // Updated from border-with-success
@@ -956,6 +960,7 @@ async function exportDemoComponents(collection: VariableCollection, semanticColl
     frame.primaryAxisSizingMode = "FIXED"; // Set to FIXED
     frame.counterAxisSizingMode = "FIXED"; // Set to FIXED
     frame.resize(1560, 520); // Set width and height to 520
+    frame.cornerRadius = 24;
     frame.itemSpacing = 0; // Remove spacing between items
     frame.paddingLeft = 0; // Remove left padding
     frame.paddingRight = 0; // Remove right padding
@@ -963,6 +968,10 @@ async function exportDemoComponents(collection: VariableCollection, semanticColl
     frame.paddingBottom = 0; // Remove bottom padding
     frame.layoutAlign = "CENTER"; // Center the frame
     frame.counterAxisAlignItems = "CENTER"; // Center children
+    
+    // Position frame on canvas (above the documentation frame)
+    frame.x = 100;
+    frame.y = 100;
 
     // Create three main columns
       const leftColumn = await createFixedWidthFrame(await createFeaturedCard(semanticCollection || collection), "surface/surface-neutral-primary", semanticCollection || collection);
@@ -1048,7 +1057,7 @@ async function createButton(
   await applyVariableWithFallback(
     button,
     collection,
-    "border/border-with-surface-neutral-primary", // Set stroke color to border/border-with-surface
+    "border/border-with-surface-neutral", // Set stroke color to border/border-with-surface
     'backgrounds'
   );
 
@@ -1245,7 +1254,7 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
   await applyVariableWithFallback(
     list,
     collection,
-    "border/border-with-surface-neutral-primary",
+    "border/border-with-surface-neutral",
     'backgrounds'
   );
 
@@ -1343,7 +1352,7 @@ async function createProductListItem(
   await applyVariableWithFallback(
     thumbnail,
     collection,
-    "border/border-with-surface-neutral-primary",
+    "border/border-with-surface-neutral",
     'backgrounds'
   );
 
@@ -1701,8 +1710,8 @@ const DOCUMENTATION_ITEMS: DocumentationItem[] = [
   { name: "Bg-success-subtle-emphasized", variablePath: "background/bg-success-subtle-emphasized", primitiveSource: "Success Scale/4", category: 'background' },
   
   // Border items
-  { name: "Border-with-surface-neutral-primary", variablePath: "border/border-with-surface-neutral-primary", primitiveSource: "Neutral Scale/7", category: 'border' },
-  { name: "Border-with-surface-secondary", variablePath: "border/border-with-surface-secondary", primitiveSource: "Neutral Scale/8", category: 'border' },
+  { name: "Border-with-surface-neutral", variablePath: "border/border-with-surface-neutral", primitiveSource: "Neutral Scale/7", category: 'border' },
+  { name: "Border-with-surface-neutral-emphasized", variablePath: "border/border-with-surface-neutral-emphasized", primitiveSource: "Neutral Scale/8", category: 'border' },
   { name: "Border-with-bg-brand-primary", variablePath: "border/border-with-bg-brand-primary", primitiveSource: "Brand Scale/11", category: 'border' },
   { name: "Border-with-bg-brand-primary-subtle", variablePath: "border/border-with-bg-brand-primary-subtle", primitiveSource: "Brand Scale/8", category: 'border' },
   { name: "Border-with-bg-success", variablePath: "border/border-with-bg-success", primitiveSource: "Success Scale/11", category: 'border' },
@@ -1726,32 +1735,37 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
     frame.name = "CCS Documentation";
     frame.layoutMode = "VERTICAL";
     frame.primaryAxisSizingMode = "AUTO";
-    frame.counterAxisSizingMode = "AUTO";
+    frame.counterAxisSizingMode = "FIXED";
     frame.paddingLeft = 0;
     frame.paddingRight = 0;
     frame.paddingTop = 0;
     frame.paddingBottom = 80;
     frame.itemSpacing = 0;
+    frame.cornerRadius = 24;
+    frame.resize(1093, frame.height);
+    
+    // Position frame on canvas
+    frame.x = 100;
+    frame.y = 800;
     
     // Apply surface color variable to frame background
     await applyVariableWithFallback(frame, collection, "surface/surface-neutral-primary", 'backgrounds');
 
     // Create title container
-    const titleContainer = figma.createFrame();
-    titleContainer.name = "Title Container";
-    titleContainer.layoutMode = "HORIZONTAL";
-    titleContainer.primaryAxisSizingMode = "AUTO";
-    titleContainer.counterAxisSizingMode = "AUTO";
-    titleContainer.paddingLeft = 120;
-    titleContainer.paddingRight = 120;
-    titleContainer.paddingTop = 88;
-    titleContainer.paddingBottom = 24;
-    titleContainer.itemSpacing = 0;
-    // Set width to fill container
-    titleContainer.resize(1140, titleContainer.height);
-    // Apply surface-neutral-secondary background
-    await applyVariableWithFallback(titleContainer, collection, "surface/surface-neutral-secondary", 'backgrounds');
-    frame.appendChild(titleContainer);
+const titleContainer = figma.createFrame();
+titleContainer.name = "Title Container";
+titleContainer.layoutMode = "VERTICAL";
+titleContainer.primaryAxisSizingMode = "AUTO";
+titleContainer.counterAxisSizingMode = "AUTO";
+titleContainer.paddingLeft = 120;
+titleContainer.paddingRight = 120;
+titleContainer.paddingTop = 104;
+titleContainer.paddingBottom = 56;
+titleContainer.itemSpacing = 0;
+titleContainer.layoutAlign = "STRETCH";
+// Apply surface-neutral-secondary background
+await applyVariableWithFallback(titleContainer, collection, "surface/surface-neutral-secondary", 'backgrounds');
+frame.appendChild(titleContainer);
 
     // Add title
     const title = figma.createText();
@@ -1790,52 +1804,75 @@ async function createCategorySection(category: string, items: DocumentationItem[
   section.name = `${category.charAt(0).toUpperCase() + category.slice(1)} Section`;
   section.layoutMode = "VERTICAL";
   section.primaryAxisSizingMode = "AUTO";
-  section.counterAxisSizingMode = "AUTO";
+  section.counterAxisSizingMode = "FIXED";
   section.paddingLeft = 120;
   section.paddingRight = 120;
   section.paddingTop = isFirstSection ? 40 : 40;
+  section.paddingBottom = 40;
   section.itemSpacing = 0;
   section.fills = [];
+  section.layoutAlign = "STRETCH";
   
-  // Add top border for all sections except the first
-  if (!isFirstSection) {
-    // Create a separator line for the top border
-    const separator = figma.createLine();
-    separator.resize(1140, 0);
-    separator.strokeWeight = 0.75;
-    separator.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
-    await applyVariableWithFallback(separator, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
-    section.appendChild(separator);
-  }
+  // No top borders for any sections
 
   // Add category heading
+  const headingContainer = figma.createFrame();
+  headingContainer.name = "Heading Container";
+  headingContainer.layoutMode = "VERTICAL";
+  headingContainer.primaryAxisSizingMode = "AUTO";
+  headingContainer.counterAxisSizingMode = "AUTO";
+  headingContainer.paddingBottom = 16;
+  headingContainer.fills = [];
+  headingContainer.layoutAlign = "STRETCH";
+  
   const heading = figma.createText();
   heading.characters = category.charAt(0).toUpperCase() + category.slice(1);
-  heading.fontSize = 20;
+  heading.fontSize = 18;
   heading.fontName = { family: "Inter", style: "Bold" };
   heading.textAutoResize = "HEIGHT";
+  heading.layoutAlign = "STRETCH";
   // Apply text color variable
-  await applyVariableWithFallback(heading, collection, "text/text-neutral-primary", 'text');
-  section.appendChild(heading);
+  await applyVariableWithFallback(heading, collection, "text/text-neutral-secondary", 'text');
+  
+  headingContainer.appendChild(heading);
+  section.appendChild(headingContainer);
 
-  // Add column headers
-  const headerRow = await createHeaderRow(category, collection);
-  section.appendChild(headerRow);
+  // Create content wrapper (no padding, full width)
+  const contentWrapper = figma.createFrame();
+  contentWrapper.name = "Content Wrapper";
+  contentWrapper.layoutMode = "VERTICAL";
+  contentWrapper.primaryAxisSizingMode = "AUTO";
+  contentWrapper.counterAxisSizingMode = "FIXED";
+  contentWrapper.itemSpacing = 0;
+  contentWrapper.fills = [];
+  contentWrapper.layoutAlign = "STRETCH";
+  contentWrapper.resize(853, contentWrapper.height); // 1093 - 240 (padding)
+  section.appendChild(contentWrapper);
+
+  // Add column headers (hidden)
+  // const headerRow = await createHeaderRow(category, collection);
+  // contentWrapper.appendChild(headerRow);
+
+  // Add line above the first row with values (hidden)
+  // const topSeparator = figma.createLine();
+  // topSeparator.strokeWeight = 0.5;
+  // topSeparator.layoutAlign = "STRETCH";
+  // await applyVariableWithFallback(topSeparator, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
+  // contentWrapper.appendChild(topSeparator);
 
   // Add items
   for (let i = 0; i < items.length; i++) {
     const isLastItem = i === items.length - 1;
     const itemRow = await createItemRow(items[i], collection, isLastItem);
-    section.appendChild(itemRow);
+    contentWrapper.appendChild(itemRow);
     
     // Add separator line (except for last item)
     if (i < items.length - 1) {
       const separator = figma.createLine();
-      separator.resize(1100, 0);
-      separator.strokeWeight = 0.75;
-      separator.strokes = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
-      await applyVariableWithFallback(separator, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
-      section.appendChild(separator);
+      separator.strokeWeight = 0.5;
+      separator.layoutAlign = "STRETCH";
+      await applyVariableWithFallback(separator, collection, "border/border-with-surface-neutral", 'backgrounds');
+      contentWrapper.appendChild(separator);
     }
   }
 
@@ -1847,14 +1884,13 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   const headerRow = figma.createFrame();
   headerRow.name = "Header Row";
   headerRow.layoutMode = "HORIZONTAL";
-  headerRow.primaryAxisSizingMode = "AUTO";
+  headerRow.primaryAxisSizingMode = "FIXED";
   headerRow.counterAxisSizingMode = "AUTO";
-  headerRow.paddingTop = 24;
-  headerRow.paddingBottom = 8;
+  headerRow.paddingTop = 32;
+  headerRow.paddingBottom = 12;
   headerRow.itemSpacing = 16;
   headerRow.fills = [];
-  // Set width to fill container
-  headerRow.resize(1100, headerRow.height);
+  headerRow.layoutAlign = "STRETCH";
 
   // Style Name header
   const styleNameHeader = figma.createText();
@@ -1862,18 +1898,18 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   styleNameHeader.fontSize = 12;
   styleNameHeader.fontName = { family: "Inter", style: "Medium" };
   styleNameHeader.textAutoResize = "HEIGHT";
-  styleNameHeader.resize(440, 16);
+  styleNameHeader.resize(375, styleNameHeader.height);
   // Apply text color variable
   await applyVariableWithFallback(styleNameHeader, collection, "text/text-neutral-secondary", 'text');
   headerRow.appendChild(styleNameHeader);
 
   // Primitive header
   const primitiveHeader = figma.createText();
-  primitiveHeader.characters = category === 'surface' ? "Primitive - Radix" : "Global";
+  primitiveHeader.characters = "Primitive - Radix";
   primitiveHeader.fontSize = 12;
   primitiveHeader.fontName = { family: "Inter", style: "Medium" };
   primitiveHeader.textAutoResize = "HEIGHT";
-  primitiveHeader.resize(300, 16);
+  primitiveHeader.resize(225, primitiveHeader.height);
   // Apply text color variable
   await applyVariableWithFallback(primitiveHeader, collection, "text/text-neutral-secondary", 'text');
   headerRow.appendChild(primitiveHeader);
@@ -1884,7 +1920,7 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   hexValueHeader.fontSize = 12;
   hexValueHeader.fontName = { family: "Inter", style: "Medium" };
   hexValueHeader.textAutoResize = "HEIGHT";
-  hexValueHeader.resize(300, 16);
+  hexValueHeader.resize(225, hexValueHeader.height);
   // Apply text color variable
   await applyVariableWithFallback(hexValueHeader, collection, "text/text-neutral-secondary", 'text');
   headerRow.appendChild(hexValueHeader);
@@ -1897,16 +1933,15 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   const row = figma.createFrame();
   row.name = `${item.name} Row`;
   row.layoutMode = "HORIZONTAL";
-  row.primaryAxisSizingMode = "AUTO";
+  row.primaryAxisSizingMode = "FIXED";
   row.counterAxisSizingMode = "AUTO";
   row.primaryAxisAlignItems = "MIN"; // left aligned
-  row.counterAxisAlignItems = "MIN"; // top aligned (equivalent to "Align left" in screenshot)
+  row.counterAxisAlignItems = "CENTER"; // middle aligned vertically (equivalent to "Align left" in screenshot)
   row.paddingTop = 24;
   row.paddingBottom = 24;
   row.itemSpacing = 14;
   row.fills = [];
-  // Set width to fill container
-  row.resize(1100, row.height);
+  row.layoutAlign = "STRETCH";
 
   // Color swatch
   const swatch = figma.createFrame();
@@ -1921,18 +1956,30 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
     await applyVariableWithFallback(swatch, collection, item.variablePath, 'backgrounds');
     // Apply appropriate fill based on the border style
     if (item.name.includes('brand')) {
-      await applyVariableWithFallback(swatch, collection, "surface/surface-brand-primary", 'backgrounds');
+      if (item.name.includes('subtle')) {
+        await applyVariableWithFallback(swatch, collection, "background/bg-brand-primary-subtle", 'backgrounds');
+      } else {
+        await applyVariableWithFallback(swatch, collection, "background/bg-brand-primary", 'backgrounds');
+      }
     } else if (item.name.includes('success')) {
-      await applyVariableWithFallback(swatch, collection, "surface/surface-success-primary", 'backgrounds');
+      if (item.name.includes('subtle')) {
+        await applyVariableWithFallback(swatch, collection, "background/bg-success-subtle", 'backgrounds');
+      } else {
+        await applyVariableWithFallback(swatch, collection, "background/bg-success", 'backgrounds');
+      }
     } else if (item.name.includes('error')) {
-      await applyVariableWithFallback(swatch, collection, "surface/surface-error-primary", 'backgrounds');
+      if (item.name.includes('subtle')) {
+        await applyVariableWithFallback(swatch, collection, "background/bg-error-subtle", 'backgrounds');
+      } else {
+        await applyVariableWithFallback(swatch, collection, "background/bg-error", 'backgrounds');
+      }
     } else {
       await applyVariableWithFallback(swatch, collection, "surface/surface-neutral-primary", 'backgrounds');
     }
   } else {
     swatch.strokeWeight = 0.5;
     // Apply border color variable
-    await applyVariableWithFallback(swatch, collection, "border/border-with-surface-neutral-primary", 'backgrounds');
+    await applyVariableWithFallback(swatch, collection, "border/border-with-surface-neutral", 'backgrounds');
     // Apply variable color to swatch
     await applyVariableWithFallback(swatch, collection, item.variablePath, 'backgrounds');
   }
@@ -1942,9 +1989,7 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   styleName.characters = item.name;
   styleName.fontSize = 14;
   styleName.fontName = { family: "Inter", style: "Regular" };
-  styleName.textAutoResize = "HEIGHT";
-  // Set width to fill container
-  styleName.resize(400, 20);
+  styleName.textAutoResize = "WIDTH_AND_HEIGHT";
   // Apply text color variable
   await applyVariableWithFallback(styleName, collection, "text/text-neutral-primary", 'text');
   
@@ -1955,11 +2000,11 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   styleContainer.primaryAxisSizingMode = "FIXED";
   styleContainer.counterAxisSizingMode = "AUTO";
   styleContainer.primaryAxisAlignItems = "MIN"; // left aligned
-  styleContainer.counterAxisAlignItems = "MIN"; // top aligned (equivalent to "Align left" in screenshot)
+  styleContainer.counterAxisAlignItems = "CENTER"; // middle aligned vertically (not "MIN")
   styleContainer.itemSpacing = 16;
   styleContainer.fills = [];
-  // Set width to fixed 440px
-  styleContainer.resize(440, styleContainer.height);
+  // Set width to fixed 375px
+  styleContainer.resize(375, styleContainer.height);
   
   styleContainer.appendChild(swatch);
   styleContainer.appendChild(styleName);
@@ -1996,8 +2041,8 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   primitiveContainer.primaryAxisSizingMode = "AUTO";
   primitiveContainer.counterAxisSizingMode = "AUTO";
   primitiveContainer.fills = [];
-  // Set width to fill container
-  primitiveContainer.resize(300, primitiveContainer.height);
+  // Set width to 225px
+  primitiveContainer.resize(225, primitiveContainer.height);
   
   primitiveContainer.appendChild(primitiveBadge);
   row.appendChild(primitiveContainer);
@@ -2017,7 +2062,9 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   await applyVariableWithFallback(hexValueBadge, collection, "surface/surface-neutral-secondary", 'backgrounds');
 
   const hexValueText = figma.createText();
-  hexValueText.characters = "#000000"; // Placeholder - we'll need to get the actual hex value
+  // For now, show the variable path. In advanced mode, this would show the primitive reference
+  // and we could resolve to the actual hex value from the primitive variable
+  hexValueText.characters = item.variablePath;
   hexValueText.fontSize = 12;
   hexValueText.fontName = { family: "Inter", style: "Regular" };
   hexValueText.textAutoResize = "HEIGHT";
@@ -2032,8 +2079,8 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   hexValueContainer.primaryAxisSizingMode = "AUTO";
   hexValueContainer.counterAxisSizingMode = "AUTO";
   hexValueContainer.fills = [];
-  // Set width to fill container
-  hexValueContainer.resize(300, hexValueContainer.height);
+  // Set width to 225px
+  hexValueContainer.resize(225, hexValueContainer.height);
   
   hexValueContainer.appendChild(hexValueBadge);
   row.appendChild(hexValueContainer);
