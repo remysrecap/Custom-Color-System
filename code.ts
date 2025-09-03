@@ -9,6 +9,9 @@ import { generateRadixColors } from "radix-theme-generator";
 figma.showUI(__html__);
 figma.ui.resize(320, 420);
 
+// Global map to store hex values for variables per mode
+const variableHexValues = new Map<string, Map<string, string>>();
+
 // Run capability check at plugin start
 const testCollection = figma.variables.createVariableCollection("__test_collection");
 let supportsMultipleModes = false;
@@ -161,6 +164,145 @@ async function findExistingVariable(collection: VariableCollection, name: string
   return null;
 }
 
+// Utility function to convert RGB to hex
+function rgbToHex(r: number, g: number, b: number): string {
+  const toHex = (n: number) => Math.round(n * 255).toString(16).padStart(2, '0');
+  const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  
+  // Simple fix: ensure we never have 3-character hex values like #FFF
+  // Convert any 3-character hex to 6-character hex
+  if (hex.length === 4) { // #FFF -> #FFFFFF
+    const colorPart = hex.substring(1); // Remove #
+    const expanded = colorPart.split('').map(char => char + char).join('');
+    return `#${expanded}`;
+  }
+  
+  return hex;
+}
+
+// Utility function to convert RGBA to hex (including alpha)
+function rgbaToHex(r: number, g: number, b: number, a: number): string {
+  const toHex = (n: number) => Math.round(n * 255).toString(16).padStart(2, '0');
+  const colorHex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  
+  // If alpha is 1 (fully opaque), return just the color hex
+  if (a === 1) {
+    return colorHex;
+  }
+  
+  // If alpha is not 1, add the alpha channel
+  const alphaHex = Math.round(a * 255).toString(16).padStart(2, '0');
+  const result = `${colorHex}${alphaHex}`;
+  console.log(`[rgbaToHex] RGBA(${r}, ${g}, ${b}, ${a}) -> ${result} (alpha: ${a} -> ${alphaHex})`);
+  return result;
+}
+
+// Utility function to ensure any hex value is always 6 characters and handle alpha
+function normalizeHex(hex: string): string {
+  // Remove # if present
+  const cleanHex = hex.startsWith('#') ? hex.substring(1) : hex;
+  
+  // If it's 3 characters, expand it
+  if (cleanHex.length === 3) {
+    const expanded = cleanHex.split('').map(char => char + char).join('');
+    return `#${expanded.toUpperCase()}`;
+  }
+  
+  // If it's 6 characters, just add # and uppercase
+  if (cleanHex.length === 6) {
+    return `#${cleanHex.toUpperCase()}`;
+  }
+  
+  // If it's 8 characters, convert alpha to percentage
+  if (cleanHex.length === 8) {
+    const colorPart = cleanHex.substring(0, 6);
+    const alphaPart = cleanHex.substring(6, 8);
+    const alphaValue = parseInt(alphaPart, 16);
+    const alphaPercentage = Math.round((alphaValue / 255) * 100);
+    return `#${colorPart.toUpperCase()} ${alphaPercentage}%`;
+  }
+  
+  // For any other length, return as is with #
+  return `#${cleanHex.toUpperCase()}`;
+}
+
+
+
+
+
+// Utility function to get hex value from a color variable
+async function getHexValueFromVariable(collection: VariableCollection, variablePath: string): Promise<string> {
+  try {
+    // First, check if we have a stored hex value for this variable
+    if (variableHexValues.has(variablePath)) {
+      const modeMap = variableHexValues.get(variablePath)!;
+      // For now, return the first available hex value (we'll update this to show all modes)
+      const firstHex = modeMap.values().next().value;
+      if (firstHex) {
+        return firstHex;
+      }
+    }
+    
+    // If not found, try to find the variable and check if it's a semantic reference
+    const variable = await findVariable(collection, variablePath);
+    if (variable) {
+      // For semantic variables, we know they reference primitives
+      if (variablePath.includes('/')) {
+        // This is a semantic variable - it references a primitive
+        // Try to find the primitive it references and get its hex value
+        const primitiveName = variablePath.split('/').pop();
+        if (primitiveName) {
+          // Look for the primitive in the primitives collection
+          const allCollections = await figma.variables.getLocalVariableCollectionsAsync();
+          for (const coll of allCollections) {
+            if (coll.name.includes('Primitives')) {
+              // This is likely the primitives collection
+              const primitiveVar = await findVariable(coll, primitiveName);
+              if (primitiveVar) {
+                // Check if we have the hex value stored for the primitive
+                if (variableHexValues.has(primitiveName)) {
+                  const modeMap = variableHexValues.get(primitiveName)!;
+                  const firstHex = modeMap.values().next().value;
+                  if (firstHex) {
+                    return firstHex;
+                  }
+                }
+              }
+            }
+          }
+          
+          // If we still can't find it, try some common primitive names
+          const commonPrimitiveNames = [
+            "Background/1",
+            "Neutral Scale/2", "Neutral Scale/11", "Neutral Scale/12",
+            "Brand Scale/2", "Brand Scale/3", "Brand Scale/9", "Brand Scale/10", "Brand Scale/11",
+            "Success Scale/3", "Success Scale/4", "Success Scale/9", "Success Scale/10", "Success Scale/11",
+            "Error Scale/3", "Error Scale/4", "Error Scale/9", "Error Scale/10", "Error Scale/11",
+            "Neutral Scale Alpha/4", "Brand Scale Alpha/6"
+          ];
+          
+          for (const commonName of commonPrimitiveNames) {
+            if (variableHexValues.has(commonName)) {
+              const modeMap = variableHexValues.get(commonName)!;
+              const firstHex = modeMap.values().next().value;
+              if (firstHex) {
+                return firstHex;
+              }
+            }
+          }
+        }
+        return `Semantic: ${variablePath}`;
+      } else {
+        // This might be a primitive variable
+        return `Primitive: ${variablePath}`;
+      }
+    }
+  } catch (error) {
+    console.error(`Error getting hex value for ${variablePath}:`, error);
+  }
+  return "#000000"; // Fallback
+}
+
 
 
 
@@ -175,6 +317,15 @@ async function createOrUpdateColorVariableWithValue(collection: VariableCollecti
     if (variable) {
       await variable.setValueForMode(modeId, value);
       console.log(`Updated variable ${name} with value: ${JSON.stringify(value)}`);
+      // Convert RGBA to hex and store for later retrieval
+      const hexValue = rgbaToHex(value.r, value.g, value.b, value.a);
+      if (!variableHexValues.has(name)) {
+        variableHexValues.set(name, new Map());
+      }
+      // Store the original hex value (including alpha if present)
+      const finalHex = hexValue.toUpperCase();
+      variableHexValues.get(name)!.set(modeId, finalHex);
+      console.log(`[createOrUpdateColorVariableWithValue] Stored original hex for ${name} (${modeId}): ${hexValue}`);
     }
     return variable;
   }
@@ -182,6 +333,15 @@ async function createOrUpdateColorVariableWithValue(collection: VariableCollecti
   const variable = figma.variables.createVariable(name, collection, "COLOR");
   await variable.setValueForMode(modeId, value);
   console.log(`Created variable ${name} with value: ${JSON.stringify(value)}`);
+  // Convert RGBA to hex and store for later retrieval
+  const hexValue = rgbaToHex(value.r, value.g, value.b, value.a);
+  if (!variableHexValues.has(name)) {
+    variableHexValues.set(name, new Map());
+  }
+  // Store the original hex value (including alpha if present)
+  const finalHex = hexValue.toUpperCase();
+  variableHexValues.get(name)!.set(modeId, finalHex);
+  console.log(`[createOrUpdateColorVariableWithValue] Stored original hex for ${name} (${modeId}): ${hexValue}`);
   return variable;
 }
 
@@ -201,6 +361,14 @@ async function createOrUpdateColorVariable(collection: VariableCollection, modeI
     if (variable) {
       await variable.setValueForMode(modeId, rgb);
       console.log(`Updated variable ${name} with value: ${JSON.stringify(rgb)}`);
+      // Store the normalized hex value for later retrieval
+      if (!variableHexValues.has(name)) {
+        variableHexValues.set(name, new Map());
+      }
+      // Store the original hex value (including alpha if present)
+      const finalHex = colorHex.toUpperCase();
+      variableHexValues.get(name)!.set(modeId, finalHex);
+      console.log(`[createOrUpdateColorVariable] Stored original hex for ${name} (${modeId}): ${colorHex}`);
     }
     return variable;
   }
@@ -208,6 +376,12 @@ async function createOrUpdateColorVariable(collection: VariableCollection, modeI
   const variable = figma.variables.createVariable(name, collection, "COLOR");
   await variable.setValueForMode(modeId, rgb);
   console.log(`Created variable ${name} with value: ${JSON.stringify(rgb)}`);
+  // Store the normalized hex value for later retrieval
+  if (!variableHexValues.has(name)) {
+    variableHexValues.set(name, new Map());
+  }
+  // Store the original hex value (including alpha if present)
+  variableHexValues.get(name)!.set(modeId, colorHex.toUpperCase());
   return variable;
 }
 
@@ -221,13 +395,31 @@ async function createOrUpdateHardcodedVar(collection: VariableCollection, modeId
     if (variable) {
       await variable.setValueForMode(modeId, value);
       console.log(`Updated variable ${name} with value: ${JSON.stringify(value)}`);
+      // Convert RGBA to hex and store for later retrieval
+      const hexValue = rgbaToHex(value.r, value.g, value.b, value.a);
+      if (!variableHexValues.has(name)) {
+        variableHexValues.set(name, new Map());
+      }
+      // Store the original hex value (including alpha if present)
+      const finalHex = hexValue.toUpperCase();
+      variableHexValues.get(name)!.set(modeId, finalHex);
+      console.log(`[createOrUpdateHardcodedVar] Stored original hex for ${name} (${modeId}): ${hexValue}`);
     }
     return variable;
   }
 
   const variable = figma.variables.createVariable(name, collection, "COLOR");
+  console.log(`[createOrUpdateHardcodedVar] Setting value for ${name}:`, JSON.stringify(value));
+  console.log(`[createOrUpdateHardcodedVar] Value type:`, typeof value, 'r:', typeof value.r, 'g:', typeof value.g, 'b:', typeof value.b, 'a:', typeof value.a);
   await variable.setValueForMode(modeId, value);
   console.log(`Created variable ${name} with value: ${JSON.stringify(value)}`);
+  console.log(`[createOrUpdateHardcodedVar] Variable created with ID: ${variable.id}`);
+  // Convert RGBA to hex and store for later retrieval
+  const hexValue = rgbaToHex(value.r, value.g, value.b, value.a);
+      if (!variableHexValues.has(name)) {
+        variableHexValues.set(name, new Map());
+      }
+      variableHexValues.get(name)!.set(modeId, hexValue);
   return variable;
 }
 
@@ -259,9 +451,9 @@ if (!meetsAAContrast(colorHex, backgroundColor)) {
           }
           
           const mixedColor = mixColors(accent9, accent12, mixRatio);
-          const mixedHex = `#${Math.round(mixedColor.r * 255).toString(16).padStart(2, '0')}${
+          const mixedHex = normalizeHex(`#${Math.round(mixedColor.r * 255).toString(16).padStart(2, '0')}${
               Math.round(mixedColor.g * 255).toString(16).padStart(2, '0')}${
-              Math.round(mixedColor.b * 255).toString(16).padStart(2, '0')}`;
+              Math.round(mixedColor.b * 255).toString(16).padStart(2, '0')}`);
           
           if (meetsAAContrast(mixedHex, backgroundColor)) {
               rgb = mixedColor;
@@ -279,6 +471,15 @@ if (!meetsAAContrast(colorHex, backgroundColor)) {
     if (variable) {
       await variable.setValueForMode(modeId, rgb);
       console.log(`Updated variable ${name} with value: ${JSON.stringify(rgb)}`);
+      // Convert the final RGBA value to hex and store for later retrieval
+      const finalHex = rgbaToHex(rgb.r, rgb.g, rgb.b, rgb.a);
+      if (!variableHexValues.has(name)) {
+        variableHexValues.set(name, new Map());
+      }
+      // Store the original hex value (including alpha if present)
+      const finalNormalizedHex = finalHex.toUpperCase();
+      variableHexValues.get(name)!.set(modeId, finalNormalizedHex);
+      console.log(`[createOrUpdateContrastColorVariable] Stored original hex for ${name} (${modeId}): ${finalHex}`);
     }
     return variable;
   }
@@ -286,6 +487,15 @@ if (!meetsAAContrast(colorHex, backgroundColor)) {
   const variable = figma.variables.createVariable(name, collection, "COLOR");
   await variable.setValueForMode(modeId, rgb);
   console.log(`Created variable ${name} with value: ${JSON.stringify(rgb)}`);
+  // Convert the final RGBA value to hex and store for later retrieval
+  const finalHex = rgbaToHex(rgb.r, rgb.g, rgb.b, rgb.a);
+  if (!variableHexValues.has(name)) {
+    variableHexValues.set(name, new Map());
+  }
+  // Store the original hex value (including alpha if present)
+  const finalNormalizedHex = finalHex.toUpperCase();
+  variableHexValues.get(name)!.set(modeId, finalNormalizedHex);
+  console.log(`[createOrUpdateContrastColorVariable] Stored original hex for ${name} (${modeId}): ${finalHex}`);
   return variable;
 }
 
@@ -300,6 +510,10 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
   if (msg.type === "generate-palette") {
     const { hexColor, neutral, success, error, appearance, includePrimitives, exportDemo, exportDocumentation: shouldExportDocumentation } = msg;
     try {
+      // Clear the hex values map at the start of each run to ensure fresh values
+      variableHexValues.clear();
+      console.log("Cleared hex values map for fresh start");
+      
       console.log("Generating palette with message:", msg);
       const versionNumber = await getNextVersionNumber();
       console.log("Next version number:", versionNumber);
@@ -331,6 +545,14 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
         gray: "#CCCCCC",
         background: "#FFFFFF"
       });
+      
+      // Log the actual values from Radix theme to debug hex value issues
+      console.log("🔍 Radix Theme Debug - Light Success:");
+      console.log("  accentContrast:", lightSuccessTheme.accentContrast);
+      console.log("  accentScale[8]:", lightSuccessTheme.accentScale[8]);
+      console.log("  accentScale[9]:", lightSuccessTheme.accentScale[9]);
+      console.log("  accentScale[10]:", lightSuccessTheme.accentScale[10]);
+      console.log("  accentScale[11]:", lightSuccessTheme.accentScale[11]);
 
       const darkBrandTheme: RadixTheme = generateRadixColors({
         appearance: "dark",
@@ -359,6 +581,14 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
         gray: "#555555",
         background: "#1C1C1C" // Updated from #161616
       });
+      
+      // Log the actual values from Radix theme to debug hex value issues
+      console.log("🔍 Radix Theme Debug - Dark Success:");
+      console.log("  accentContrast:", darkSuccessTheme.accentContrast);
+      console.log("  accentScale[8]:", darkSuccessTheme.accentScale[8]);
+      console.log("  accentScale[9]:", darkSuccessTheme.accentScale[9]);
+      console.log("  accentScale[10]:", darkSuccessTheme.accentScale[10]);
+      console.log("  accentScale[11]:", darkSuccessTheme.accentScale[11]);
 
       let primitiveCollection: VariableCollection | null = null;
       let collection: VariableCollection | null = null;
@@ -538,9 +768,9 @@ async function createPrimitiveVariables(
           mixColors(accent9, accent12, mixRatio) :    // Dark mode: mix ratio of original
           mixColors(accent9, accent12, 1 - mixRatio); // Light mode: inverse mix ratio for contrast color
         
-        const mixedHex = `#${Math.round(mixedColor.r * 255).toString(16).padStart(2, '0')}${
+        const mixedHex = normalizeHex(`#${Math.round(mixedColor.r * 255).toString(16).padStart(2, '0')}${
           Math.round(mixedColor.g * 255).toString(16).padStart(2, '0')}${
-          Math.round(mixedColor.b * 255).toString(16).padStart(2, '0')}`;
+          Math.round(mixedColor.b * 255).toString(16).padStart(2, '0')}`);
         
         if (meetsAAContrast(mixedHex, backgroundColor)) {
           finalColor = mixedColor;
@@ -614,9 +844,23 @@ async function createSemanticVariables(
 
   async function createHardcodedVar(name: string, value: RGBA) {
     console.log(`Creating hardcoded variable: ${name}`);
-    const variable = figma.variables.createVariable(name, semanticCollection, "COLOR");
-    await variable.setValueForMode(modeId, value);
-    console.log(`Hardcoded variable ${name} created`);
+      const variable = figma.variables.createVariable(name, semanticCollection, "COLOR");
+  console.log(`[createHardcodedVar] Setting value for ${name}:`, JSON.stringify(value));
+  console.log(`[createHardcodedVar] Value type:`, typeof value, 'r:', typeof value.r, 'g:', typeof value.g, 'b:', typeof value.b, 'a:', typeof value.a);
+  await variable.setValueForMode(modeId, value);
+  console.log(`Hardcoded variable ${name} created`);
+  
+  // Verify the value was set correctly
+  console.log(`[createHardcodedVar] Variable created with ID: ${variable.id}`);
+    // Convert RGBA to hex and store for later retrieval
+    const hexValue = rgbaToHex(value.r, value.g, value.b, value.a);
+    if (!variableHexValues.has(name)) {
+      variableHexValues.set(name, new Map());
+    }
+    // Store the original hex value (including alpha if present)
+    const finalHex = hexValue.toUpperCase();
+    variableHexValues.get(name)!.set(modeId, finalHex);
+    console.log(`[createHardcodedVar] Stored original hex for ${name} (${modeId}): ${hexValue}`);
     return variable;
   }
 
@@ -625,7 +869,7 @@ async function createSemanticVariables(
     createSemanticVar("surface/surface-neutral-primary", "Background/1"), // Updated from surface-default
     createSemanticVar("surface/surface-neutral-secondary", "Neutral Scale/2"), // Updated from surface-base-secondary
     createSemanticVar("surface/surface-brand-primary", "Brand Scale/2"), // Updated from surface-brand-default
-    createSemanticVar("surface/surface-brand-secondary", "Brand Scale/3"), // Updated from surface-secondary
+    createSemanticVar("surface/surface-brand-primary-emphasized", "Brand Scale/3"), // Updated from surface-brand-secondary
     createSemanticVar("surface/surface-shadow", "Neutral Scale Alpha/4"),
     createHardcodedVar("surface/surface-overlay", { r: 0, g: 0, b: 0, a: 0.65 })
   ]);
@@ -712,9 +956,8 @@ async function createDirectVariables(
     createOrUpdateColorVariable(collection, modeId, "surface/surface-neutral-primary", brandTheme.background), // Updated from surface-default
     createOrUpdateColorVariable(collection, modeId, "surface/surface-neutral-secondary", neutralTheme.accentScale[1]), // Updated from surface-base-secondary
     createOrUpdateColorVariable(collection, modeId, "surface/surface-brand-primary", brandTheme.accentScale[1]), // Updated from surface-brand-default
-    createOrUpdateColorVariable(collection, modeId, "surface/surface-brand-secondary", brandTheme.accentScale[2]), // Updated from surface-secondary
-    createOrUpdateColorVariable(collection, modeId, "surface/surface-shadow", neutralTheme.accentScaleAlpha[3]),
-    createOrUpdateHardcodedVar(collection, modeId, "surface/surface-overlay", { r: 0, g: 0, b: 0, a: 0.65 })
+    createOrUpdateColorVariable(collection, modeId, "surface/surface-brand-primary-emphasized", brandTheme.accentScale[2]), // Updated from surface-brand-secondary
+    createOrUpdateColorVariable(collection, modeId, "surface/surface-shadow", neutralTheme.accentScaleAlpha[3])
   ]);
 
   // Text variables
@@ -727,8 +970,7 @@ async function createDirectVariables(
     createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-error", errorTheme.accentContrast),
     createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-error-subtle", errorTheme.accentScale[10]),
     createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-success", successTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-success-subtle", successTheme.accentScale[10]),
-    createOrUpdateHardcodedVar(collection, modeId, "text/text-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
+    createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-success-subtle", successTheme.accentScale[10])
   ]);
 
   // Icon variables
@@ -741,8 +983,7 @@ async function createDirectVariables(
     createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-error", errorTheme.accentContrast),
     createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-error-subtle", errorTheme.accentScale[10]),
     createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-success", successTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-success-subtle", successTheme.accentScale[10]),
-    createOrUpdateHardcodedVar(collection, modeId, "icon/icon-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
+    createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-success-subtle", successTheme.accentScale[10])
   ]);
 
   // Background variables
@@ -773,6 +1014,15 @@ async function createDirectVariables(
     createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-error", errorTheme.accentScale[10]), // Updated from border-with-error
     createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-error-subtle", errorTheme.accentScale[7]) // Updated from border-with-error-subtle
   ]);
+
+        // Create hardcoded variables when not using primitives
+      console.log(`[createDirectVariables] Creating hardcoded variables for mode: ${modeId}`);
+      await Promise.all([
+        createOrUpdateHardcodedVar(collection, modeId, "surface/surface-overlay", { r: 0, g: 0, b: 0, a: 0.65 }),
+        createOrUpdateHardcodedVar(collection, modeId, "text/text-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 }),
+        createOrUpdateHardcodedVar(collection, modeId, "icon/icon-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
+      ]);
+      console.log(`[createDirectVariables] Finished creating hardcoded variables`);
 }
 
 // ===============================================
@@ -1098,7 +1348,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     card,
     collection,
-    "border/border-with-surface-neutral-primary",
+    "border/border-with-surface-neutral",
     'backgrounds'
   );
 
@@ -1121,7 +1371,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     preview,
     collection,
-    "surface/surface-brand-secondary",
+    "surface/surface-brand-primary-emphasized",
     'backgrounds'
   );
 
@@ -1279,7 +1529,7 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
       await applyVariableWithFallback(
         line,
         collection,
-        "border/border-with-surface-neutral-primary",
+        "border/border-with-surface-neutral",
         'backgrounds'
       );
       list.appendChild(line);
@@ -1666,9 +1916,9 @@ const DOCUMENTATION_ITEMS: DocumentationItem[] = [
   { name: "Surface-neutral-primary", variablePath: "surface/surface-neutral-primary", primitiveSource: "Background/1", category: 'surface' },
   { name: "Surface-neutral-secondary", variablePath: "surface/surface-neutral-secondary", primitiveSource: "Neutral Scale/2", category: 'surface' },
   { name: "Surface-brand-primary", variablePath: "surface/surface-brand-primary", primitiveSource: "Brand Scale/2", category: 'surface' },
-  { name: "Surface-brand-secondary", variablePath: "surface/surface-brand-secondary", primitiveSource: "Brand Scale/3", category: 'surface' },
+  { name: "Surface-brand-primary-emphasized", variablePath: "surface/surface-brand-primary-emphasized", primitiveSource: "Brand Scale/3", category: 'surface' },
   { name: "Surface-shadow", variablePath: "surface/surface-shadow", primitiveSource: "Neutral Scale Alpha/4", category: 'surface' },
-  { name: "Surface-overlay", variablePath: "surface/surface-overlay", primitiveSource: "#000000 at 65% opacity", category: 'surface' },
+  { name: "Surface-overlay", variablePath: "surface/surface-overlay", primitiveSource: "#000000 65%", category: 'surface' },
   
   // Text items
   { name: "Text-neutral-primary", variablePath: "text/text-neutral-primary", primitiveSource: "Neutral Scale/12", category: 'text' },
@@ -1787,6 +2037,18 @@ frame.appendChild(titleContainer);
         const isFirstSection = i === 0;
         const categorySection = await createCategorySection(category, categoryItems, semanticCollection || collection, isFirstSection);
         frame.appendChild(categorySection);
+        
+        // Add separator line between sections (except after the last section)
+        if (i < categories.length - 1) {
+          const sectionSeparator = figma.createLine();
+          sectionSeparator.name = `Section Separator ${category}`;
+          sectionSeparator.strokeWeight = 0.33;
+          sectionSeparator.layoutAlign = "STRETCH";
+          sectionSeparator.resize(1093, 0); // Full width of the frame
+          // Apply border color variable for the separator line
+          await applyVariableWithFallback(sectionSeparator, collection, "border/border-with-surface-neutral", 'backgrounds');
+          frame.appendChild(sectionSeparator);
+        }
       }
     }
 
@@ -1937,8 +2199,8 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   row.counterAxisSizingMode = "AUTO";
   row.primaryAxisAlignItems = "MIN"; // left aligned
   row.counterAxisAlignItems = "CENTER"; // middle aligned vertically (equivalent to "Align left" in screenshot)
-  row.paddingTop = 24;
-  row.paddingBottom = 24;
+  row.paddingTop = 20;
+  row.paddingBottom = 20;
   row.itemSpacing = 14;
   row.fills = [];
   row.layoutAlign = "STRETCH";
@@ -2047,42 +2309,94 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   primitiveContainer.appendChild(primitiveBadge);
   row.appendChild(primitiveContainer);
 
-  // Hex Value badge
-  const hexValueBadge = figma.createFrame();
-  hexValueBadge.name = `${item.name} Hex Badge`;
-  hexValueBadge.layoutMode = "HORIZONTAL";
-  hexValueBadge.primaryAxisSizingMode = "AUTO";
-  hexValueBadge.counterAxisSizingMode = "AUTO";
-  hexValueBadge.paddingLeft = 8;
-  hexValueBadge.paddingRight = 8;
-  hexValueBadge.paddingTop = 4;
-  hexValueBadge.paddingBottom = 4;
-  hexValueBadge.cornerRadius = 6;
-  // Apply background color variable
-  await applyVariableWithFallback(hexValueBadge, collection, "surface/surface-neutral-secondary", 'backgrounds');
-
-  const hexValueText = figma.createText();
-  // For now, show the variable path. In advanced mode, this would show the primitive reference
-  // and we could resolve to the actual hex value from the primitive variable
-  hexValueText.characters = item.variablePath;
-  hexValueText.fontSize = 12;
-  hexValueText.fontName = { family: "Inter", style: "Regular" };
-  hexValueText.textAutoResize = "HEIGHT";
-  // Apply text color variable
-  await applyVariableWithFallback(hexValueText, collection, "text/text-neutral-secondary", 'text');
-  hexValueBadge.appendChild(hexValueText);
-
-  // Create parent frame for hex value badge
+  // Hex Value container - now shows multiple hex values for each mode
   const hexValueContainer = figma.createFrame();
   hexValueContainer.name = `${item.name} Hex Value Container`;
   hexValueContainer.layoutMode = "HORIZONTAL";
   hexValueContainer.primaryAxisSizingMode = "AUTO";
   hexValueContainer.counterAxisSizingMode = "AUTO";
+  hexValueContainer.itemSpacing = 8; // 8px gap between hex values
   hexValueContainer.fills = [];
   // Set width to 225px
   hexValueContainer.resize(225, hexValueContainer.height);
   
-  hexValueContainer.appendChild(hexValueBadge);
+  // Get all available hex values for this variable
+  if (variableHexValues.has(item.variablePath)) {
+    const modeMap = variableHexValues.get(item.variablePath)!;
+    const modeIds = Array.from(modeMap.keys());
+    
+    // Sort mode IDs to match the order of variable modes
+    const sortedModeIds = modeIds.sort((a, b) => {
+      // Put "Light" first, then "Dark" if both exist
+      if (a === "Light") return -1;
+      if (b === "Light") return 1;
+      if (a === "Dark") return -1;
+      if (b === "Dark") return 1;
+      return a.localeCompare(b);
+    });
+    
+    // Create a hex value badge for each mode
+    for (const modeId of sortedModeIds) {
+      const hexValue = modeMap.get(modeId)!;
+      
+      const hexValueBadge = figma.createFrame();
+      hexValueBadge.name = `${item.name} Hex Badge ${modeId}`;
+      hexValueBadge.layoutMode = "HORIZONTAL";
+      hexValueBadge.primaryAxisSizingMode = "AUTO";
+      hexValueBadge.counterAxisSizingMode = "AUTO";
+      hexValueBadge.paddingLeft = 8;
+      hexValueBadge.paddingRight = 8;
+      hexValueBadge.paddingTop = 4;
+      hexValueBadge.paddingBottom = 4;
+      hexValueBadge.cornerRadius = 6;
+      // Apply background color variable
+      await applyVariableWithFallback(hexValueBadge, collection, "surface/surface-neutral-secondary", 'backgrounds');
+
+      const hexValueText = figma.createText();
+      // Use the normalizeHex function to ensure 6 characters
+      const normalizedHex = normalizeHex(hexValue);
+      hexValueText.characters = normalizedHex;
+      hexValueText.fontSize = 12;
+      hexValueText.fontName = { family: "Inter", style: "Regular" };
+      hexValueText.textAutoResize = "HEIGHT";
+      hexValueText.textAlignHorizontal = "CENTER";
+      // Apply text color variable
+      await applyVariableWithFallback(hexValueText, collection, "text/text-neutral-secondary", 'text');
+      hexValueBadge.appendChild(hexValueText);
+      
+      hexValueContainer.appendChild(hexValueBadge);
+    }
+  } else {
+    // Fallback: create a single hex value badge with placeholder
+    const hexValueBadge = figma.createFrame();
+    hexValueBadge.name = `${item.name} Hex Badge Fallback`;
+    hexValueBadge.layoutMode = "HORIZONTAL";
+    hexValueBadge.primaryAxisSizingMode = "AUTO";
+    hexValueBadge.counterAxisSizingMode = "AUTO";
+    hexValueBadge.paddingLeft = 8;
+    hexValueBadge.paddingRight = 8;
+    hexValueBadge.paddingTop = 4;
+    hexValueBadge.paddingBottom = 4;
+    hexValueBadge.cornerRadius = 6;
+    // Apply background color variable
+    await applyVariableWithFallback(hexValueBadge, collection, "surface/surface-neutral-secondary", 'backgrounds');
+
+    const hexValueText = figma.createText();
+    // Try to get hex value using the old method as fallback
+    const hexValue = await getHexValueFromVariable(collection, item.variablePath);
+    // Use the normalizeHex function to ensure 6 characters
+    const normalizedHex = normalizeHex(hexValue);
+    hexValueText.characters = normalizedHex;
+    hexValueText.fontSize = 12;
+    hexValueText.fontName = { family: "Inter", style: "Regular" };
+    hexValueText.textAutoResize = "HEIGHT";
+    // Apply text color variable
+    await applyVariableWithFallback(hexValueText, collection, "text/text-neutral-secondary", 'text');
+    hexValueBadge.appendChild(hexValueText);
+    
+    hexValueContainer.appendChild(hexValueBadge);
+  }
+  
   row.appendChild(hexValueContainer);
 
   return row;
