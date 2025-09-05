@@ -9,6 +9,9 @@ import { generateRadixColors } from "radix-theme-generator";
 figma.showUI(__html__);
 figma.ui.resize(320, 420);
 
+// Global map to store hex values for variables per mode
+const variableHexValues = new Map<string, Map<string, string>>();
+
 // Run capability check at plugin start
 const testCollection = figma.variables.createVariableCollection("__test_collection");
 let supportsMultipleModes = false;
@@ -48,7 +51,8 @@ interface PluginMessage {
   error: string;
   appearance: "light" | "dark" | "both";
   includePrimitives: boolean;
-  exportDemo: boolean;  // Add this line
+  exportDemo: boolean;
+  exportDocumentation: boolean;  // Add this line
 }
 
 // Utility function to convert hex colors to RGB format for Figma
@@ -160,6 +164,133 @@ async function findExistingVariable(collection: VariableCollection, name: string
   return null;
 }
 
+// Utility function to convert RGB to hex
+function rgbToHex(r: number, g: number, b: number): string {
+  const toHex = (n: number) => Math.round(n * 255).toString(16).padStart(2, '0');
+  const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  
+  // Simple fix: ensure we never have 3-character hex values like #FFF
+  // Convert any 3-character hex to 6-character hex
+  if (hex.length === 4) { // #FFF -> #FFFFFF
+    const colorPart = hex.substring(1); // Remove #
+    const expanded = colorPart.split('').map(char => char + char).join('');
+    return `#${expanded}`;
+  }
+  
+  return hex;
+}
+
+// Utility function to convert RGBA to hex (including alpha)
+function rgbaToHex(r: number, g: number, b: number, a: number): string {
+  const toHex = (n: number) => Math.round(n * 255).toString(16).padStart(2, '0');
+  const colorHex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  
+  // If alpha is 1 (fully opaque), return just the color hex
+  if (a === 1) {
+    return colorHex;
+  }
+  
+  // If alpha is not 1, add the alpha channel
+  const alphaHex = Math.round(a * 255).toString(16).padStart(2, '0');
+  const result = `${colorHex}${alphaHex}`;
+  console.log(`[rgbaToHex] RGBA(${r}, ${g}, ${b}, ${a}) -> ${result} (alpha: ${a} -> ${alphaHex})`);
+  return result;
+}
+
+// Utility function to ensure any hex value is always 6 characters and handle alpha
+function normalizeHex(hex: string): string {
+  // Remove # if present
+  const cleanHex = hex.startsWith('#') ? hex.substring(1) : hex;
+  
+  // If it's 3 characters, expand it
+  if (cleanHex.length === 3) {
+    const expanded = cleanHex.split('').map(char => char + char).join('');
+    return `#${expanded.toUpperCase()}`;
+  }
+  
+  // If it's 6 characters, just add # and uppercase
+  if (cleanHex.length === 6) {
+    return `#${cleanHex.toUpperCase()}`;
+  }
+  
+  // If it's 8 characters, convert alpha to percentage
+  if (cleanHex.length === 8) {
+    const colorPart = cleanHex.substring(0, 6);
+    const alphaPart = cleanHex.substring(6, 8);
+    const alphaValue = parseInt(alphaPart, 16);
+    const alphaPercentage = Math.round((alphaValue / 255) * 100);
+    return `#${colorPart.toUpperCase()} ${alphaPercentage}%`;
+  }
+  
+  // For any other length, return as is with #
+  return `#${cleanHex.toUpperCase()}`;
+}
+
+
+
+
+
+// Utility function to get hex value from a color variable
+async function getHexValueFromVariable(collection: VariableCollection, variablePath: string): Promise<string> {
+  try {
+    // First, check if we have a stored hex value for this variable
+    if (variableHexValues.has(variablePath)) {
+      const modeMap = variableHexValues.get(variablePath)!;
+      // For now, return the first available hex value (we'll update this to show all modes)
+      const firstHex = modeMap.values().next().value;
+      if (firstHex) {
+        return firstHex;
+      }
+    }
+    
+    // If not found, try to find the variable and resolve its value
+    const variable = await findVariable(collection, variablePath);
+    if (variable) {
+      // Try to get the actual resolved value from the variable
+      try {
+        const resolvedValue = variable.valuesByMode;
+        const modeIds = Object.keys(resolvedValue);
+        if (modeIds.length > 0) {
+          const firstModeId = modeIds[0];
+          const value = resolvedValue[firstModeId];
+          
+          if (value && typeof value === 'object' && 'type' in value) {
+            if (value.type === 'VARIABLE_ALIAS') {
+              // This is a semantic variable that references a primitive
+              // Try to find the referenced primitive and get its hex value
+              const referencedVar = await figma.variables.getVariableByIdAsync(value.id);
+              if (referencedVar) {
+                // Check if we have the hex value for the referenced primitive
+                if (variableHexValues.has(referencedVar.name)) {
+                  const modeMap = variableHexValues.get(referencedVar.name)!;
+                  const firstHex = modeMap.values().next().value;
+                  if (firstHex) {
+                    return firstHex;
+                  }
+                }
+              }
+            } else if (value.type === 'SOLID') {
+              // This is a direct color value
+              const color = (value as any).color;
+              const alpha = (value as any).opacity !== undefined ? (value as any).opacity : 1;
+              return rgbaToHex(color.r, color.g, color.b, alpha);
+            }
+          }
+        }
+      } catch (resolveError) {
+        console.error(`Error resolving variable value for ${variablePath}:`, resolveError);
+      }
+    }
+  } catch (error) {
+    console.error(`Error getting hex value for ${variablePath}:`, error);
+  }
+  return "#000000"; // Fallback
+}
+
+
+
+
+
 // Utility function to create or update a color variable with a specific value
 async function createOrUpdateColorVariableWithValue(collection: VariableCollection, modeId: string, name: string, value: RGBA): Promise<Variable | null> {
   console.log(`Attempting to create or update color variable: ${name} with value: ${JSON.stringify(value)}`);
@@ -170,6 +301,15 @@ async function createOrUpdateColorVariableWithValue(collection: VariableCollecti
     if (variable) {
       await variable.setValueForMode(modeId, value);
       console.log(`Updated variable ${name} with value: ${JSON.stringify(value)}`);
+      // Convert RGBA to hex and store for later retrieval
+      const hexValue = rgbaToHex(value.r, value.g, value.b, value.a);
+      if (!variableHexValues.has(name)) {
+        variableHexValues.set(name, new Map());
+      }
+      // Store the original hex value (including alpha if present)
+      const finalHex = hexValue.toUpperCase();
+      variableHexValues.get(name)!.set(modeId, finalHex);
+      console.log(`[createOrUpdateColorVariableWithValue] Stored original hex for ${name} (${modeId}): ${hexValue}`);
     }
     return variable;
   }
@@ -177,6 +317,15 @@ async function createOrUpdateColorVariableWithValue(collection: VariableCollecti
   const variable = figma.variables.createVariable(name, collection, "COLOR");
   await variable.setValueForMode(modeId, value);
   console.log(`Created variable ${name} with value: ${JSON.stringify(value)}`);
+  // Convert RGBA to hex and store for later retrieval
+  const hexValue = rgbaToHex(value.r, value.g, value.b, value.a);
+  if (!variableHexValues.has(name)) {
+    variableHexValues.set(name, new Map());
+  }
+  // Store the original hex value (including alpha if present)
+  const finalHex = hexValue.toUpperCase();
+  variableHexValues.get(name)!.set(modeId, finalHex);
+  console.log(`[createOrUpdateColorVariableWithValue] Stored original hex for ${name} (${modeId}): ${hexValue}`);
   return variable;
 }
 
@@ -196,6 +345,14 @@ async function createOrUpdateColorVariable(collection: VariableCollection, modeI
     if (variable) {
       await variable.setValueForMode(modeId, rgb);
       console.log(`Updated variable ${name} with value: ${JSON.stringify(rgb)}`);
+      // Store the normalized hex value for later retrieval
+      if (!variableHexValues.has(name)) {
+        variableHexValues.set(name, new Map());
+      }
+      // Store the original hex value (including alpha if present)
+      const finalHex = colorHex.toUpperCase();
+      variableHexValues.get(name)!.set(modeId, finalHex);
+      console.log(`[createOrUpdateColorVariable] Stored original hex for ${name} (${modeId}): ${colorHex}`);
     }
     return variable;
   }
@@ -203,6 +360,12 @@ async function createOrUpdateColorVariable(collection: VariableCollection, modeI
   const variable = figma.variables.createVariable(name, collection, "COLOR");
   await variable.setValueForMode(modeId, rgb);
   console.log(`Created variable ${name} with value: ${JSON.stringify(rgb)}`);
+  // Store the normalized hex value for later retrieval
+  if (!variableHexValues.has(name)) {
+    variableHexValues.set(name, new Map());
+  }
+  // Store the original hex value (including alpha if present)
+  variableHexValues.get(name)!.set(modeId, colorHex.toUpperCase());
   return variable;
 }
 
@@ -216,13 +379,31 @@ async function createOrUpdateHardcodedVar(collection: VariableCollection, modeId
     if (variable) {
       await variable.setValueForMode(modeId, value);
       console.log(`Updated variable ${name} with value: ${JSON.stringify(value)}`);
+      // Convert RGBA to hex and store for later retrieval
+      const hexValue = rgbaToHex(value.r, value.g, value.b, value.a);
+      if (!variableHexValues.has(name)) {
+        variableHexValues.set(name, new Map());
+      }
+      // Store the original hex value (including alpha if present)
+      const finalHex = hexValue.toUpperCase();
+      variableHexValues.get(name)!.set(modeId, finalHex);
+      console.log(`[createOrUpdateHardcodedVar] Stored original hex for ${name} (${modeId}): ${hexValue}`);
     }
     return variable;
   }
 
   const variable = figma.variables.createVariable(name, collection, "COLOR");
+  console.log(`[createOrUpdateHardcodedVar] Setting value for ${name}:`, JSON.stringify(value));
+  console.log(`[createOrUpdateHardcodedVar] Value type:`, typeof value, 'r:', typeof value.r, 'g:', typeof value.g, 'b:', typeof value.b, 'a:', typeof value.a);
   await variable.setValueForMode(modeId, value);
   console.log(`Created variable ${name} with value: ${JSON.stringify(value)}`);
+  console.log(`[createOrUpdateHardcodedVar] Variable created with ID: ${variable.id}`);
+  // Convert RGBA to hex and store for later retrieval
+  const hexValue = rgbaToHex(value.r, value.g, value.b, value.a);
+      if (!variableHexValues.has(name)) {
+        variableHexValues.set(name, new Map());
+      }
+      variableHexValues.get(name)!.set(modeId, hexValue);
   return variable;
 }
 
@@ -254,9 +435,9 @@ if (!meetsAAContrast(colorHex, backgroundColor)) {
           }
           
           const mixedColor = mixColors(accent9, accent12, mixRatio);
-          const mixedHex = `#${Math.round(mixedColor.r * 255).toString(16).padStart(2, '0')}${
+          const mixedHex = normalizeHex(`#${Math.round(mixedColor.r * 255).toString(16).padStart(2, '0')}${
               Math.round(mixedColor.g * 255).toString(16).padStart(2, '0')}${
-              Math.round(mixedColor.b * 255).toString(16).padStart(2, '0')}`;
+              Math.round(mixedColor.b * 255).toString(16).padStart(2, '0')}`);
           
           if (meetsAAContrast(mixedHex, backgroundColor)) {
               rgb = mixedColor;
@@ -274,6 +455,15 @@ if (!meetsAAContrast(colorHex, backgroundColor)) {
     if (variable) {
       await variable.setValueForMode(modeId, rgb);
       console.log(`Updated variable ${name} with value: ${JSON.stringify(rgb)}`);
+      // Convert the final RGBA value to hex and store for later retrieval
+      const finalHex = rgbaToHex(rgb.r, rgb.g, rgb.b, rgb.a);
+      if (!variableHexValues.has(name)) {
+        variableHexValues.set(name, new Map());
+      }
+      // Store the original hex value (including alpha if present)
+      const finalNormalizedHex = finalHex.toUpperCase();
+      variableHexValues.get(name)!.set(modeId, finalNormalizedHex);
+      console.log(`[createOrUpdateContrastColorVariable] Stored original hex for ${name} (${modeId}): ${finalHex}`);
     }
     return variable;
   }
@@ -281,6 +471,15 @@ if (!meetsAAContrast(colorHex, backgroundColor)) {
   const variable = figma.variables.createVariable(name, collection, "COLOR");
   await variable.setValueForMode(modeId, rgb);
   console.log(`Created variable ${name} with value: ${JSON.stringify(rgb)}`);
+  // Convert the final RGBA value to hex and store for later retrieval
+  const finalHex = rgbaToHex(rgb.r, rgb.g, rgb.b, rgb.a);
+  if (!variableHexValues.has(name)) {
+    variableHexValues.set(name, new Map());
+  }
+  // Store the original hex value (including alpha if present)
+  const finalNormalizedHex = finalHex.toUpperCase();
+  variableHexValues.get(name)!.set(modeId, finalNormalizedHex);
+  console.log(`[createOrUpdateContrastColorVariable] Stored original hex for ${name} (${modeId}): ${finalHex}`);
   return variable;
 }
 
@@ -293,8 +492,12 @@ let isClosing = false;
 
 figma.ui.onmessage = async (msg: PluginMessage) => {
   if (msg.type === "generate-palette") {
-    const { hexColor, neutral, success, error, appearance, includePrimitives, exportDemo } = msg;
+    const { hexColor, neutral, success, error, appearance, includePrimitives, exportDemo, exportDocumentation: shouldExportDocumentation } = msg;
     try {
+      // Clear the hex values map at the start of each run to ensure fresh values
+      variableHexValues.clear();
+      console.log("Cleared hex values map for fresh start");
+      
       console.log("Generating palette with message:", msg);
       const versionNumber = await getNextVersionNumber();
       console.log("Next version number:", versionNumber);
@@ -326,6 +529,14 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
         gray: "#CCCCCC",
         background: "#FFFFFF"
       });
+      
+      // Log the actual values from Radix theme to debug hex value issues
+      console.log("🔍 Radix Theme Debug - Light Success:");
+      console.log("  accentContrast:", lightSuccessTheme.accentContrast);
+      console.log("  accentScale[8]:", lightSuccessTheme.accentScale[8]);
+      console.log("  accentScale[9]:", lightSuccessTheme.accentScale[9]);
+      console.log("  accentScale[10]:", lightSuccessTheme.accentScale[10]);
+      console.log("  accentScale[11]:", lightSuccessTheme.accentScale[11]);
 
       const darkBrandTheme: RadixTheme = generateRadixColors({
         appearance: "dark",
@@ -354,6 +565,14 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
         gray: "#555555",
         background: "#1C1C1C" // Updated from #161616
       });
+      
+      // Log the actual values from Radix theme to debug hex value issues
+      console.log("🔍 Radix Theme Debug - Dark Success:");
+      console.log("  accentContrast:", darkSuccessTheme.accentContrast);
+      console.log("  accentScale[8]:", darkSuccessTheme.accentScale[8]);
+      console.log("  accentScale[9]:", darkSuccessTheme.accentScale[9]);
+      console.log("  accentScale[10]:", darkSuccessTheme.accentScale[10]);
+      console.log("  accentScale[11]:", darkSuccessTheme.accentScale[11]);
 
       let primitiveCollection: VariableCollection | null = null;
       let collection: VariableCollection | null = null;
@@ -383,6 +602,11 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
         if (exportDemo) {
           await exportDemoComponents(primitiveCollection, semanticCollection);
         }
+
+        // Create documentation if enabled
+        if (shouldExportDocumentation) {
+          await exportDocumentation(primitiveCollection, semanticCollection);
+        }
       } else {
         collection = figma.variables.createVariableCollection(`CCS ${versionNumber}`);
         
@@ -403,6 +627,11 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
         // Create demo components if enabled
         if (exportDemo) {
           await exportDemoComponents(collection);
+        }
+
+        // Create documentation if enabled
+        if (shouldExportDocumentation) {
+          await exportDocumentation(collection);
         }
       }
 
@@ -523,9 +752,9 @@ async function createPrimitiveVariables(
           mixColors(accent9, accent12, mixRatio) :    // Dark mode: mix ratio of original
           mixColors(accent9, accent12, 1 - mixRatio); // Light mode: inverse mix ratio for contrast color
         
-        const mixedHex = `#${Math.round(mixedColor.r * 255).toString(16).padStart(2, '0')}${
+        const mixedHex = normalizeHex(`#${Math.round(mixedColor.r * 255).toString(16).padStart(2, '0')}${
           Math.round(mixedColor.g * 255).toString(16).padStart(2, '0')}${
-          Math.round(mixedColor.b * 255).toString(16).padStart(2, '0')}`;
+          Math.round(mixedColor.b * 255).toString(16).padStart(2, '0')}`);
         
         if (meetsAAContrast(mixedHex, backgroundColor)) {
           finalColor = mixedColor;
@@ -599,20 +828,34 @@ async function createSemanticVariables(
 
   async function createHardcodedVar(name: string, value: RGBA) {
     console.log(`Creating hardcoded variable: ${name}`);
-    const variable = figma.variables.createVariable(name, semanticCollection, "COLOR");
-    await variable.setValueForMode(modeId, value);
-    console.log(`Hardcoded variable ${name} created`);
+      const variable = figma.variables.createVariable(name, semanticCollection, "COLOR");
+  console.log(`[createHardcodedVar] Setting value for ${name}:`, JSON.stringify(value));
+  console.log(`[createHardcodedVar] Value type:`, typeof value, 'r:', typeof value.r, 'g:', typeof value.g, 'b:', typeof value.b, 'a:', typeof value.a);
+  await variable.setValueForMode(modeId, value);
+  console.log(`Hardcoded variable ${name} created`);
+  
+  // Verify the value was set correctly
+  console.log(`[createHardcodedVar] Variable created with ID: ${variable.id}`);
+    // Convert RGBA to hex and store for later retrieval
+    const hexValue = rgbaToHex(value.r, value.g, value.b, value.a);
+    if (!variableHexValues.has(name)) {
+      variableHexValues.set(name, new Map());
+    }
+    // Store the original hex value (including alpha if present)
+    const finalHex = hexValue.toUpperCase();
+    variableHexValues.get(name)!.set(modeId, finalHex);
+    console.log(`[createHardcodedVar] Stored original hex for ${name} (${modeId}): ${hexValue}`);
     return variable;
   }
 
   // Surface variables
   await Promise.all([
-    createSemanticVar("surface/surface-neutral-primary", "Background/1"), // Updated from surface-default
-    createSemanticVar("surface/surface-neutral-secondary", "Neutral Scale/2"), // Updated from surface-base-secondary
-    createSemanticVar("surface/surface-brand-primary", "Brand Scale/2"), // Updated from surface-brand-default
-    createSemanticVar("surface/surface-brand-secondary", "Brand Scale/3"), // Updated from surface-secondary
-    createSemanticVar("surface/surface-shadow", "Neutral Scale Alpha/4"),
-    createHardcodedVar("surface/surface-overlay", { r: 0, g: 0, b: 0, a: 0.65 })
+    createSemanticVar("surface/sf-neutral-primary", "Background/1"), // Updated from surface-default
+    createSemanticVar("surface/sf-neutral-secondary", "Neutral Scale/2"), // Updated from surface-base-secondary
+    createSemanticVar("surface/sf-brand-primary", "Brand Scale/2"), // Updated from surface-brand-default
+    createSemanticVar("surface/sf-brand-primary-emphasized", "Brand Scale/3"), // Updated from surface-brand-secondary
+    createSemanticVar("surface/sf-shadow", "Neutral Scale Alpha/4"),
+    createHardcodedVar("surface/sf-overlay", { r: 0, g: 0, b: 0, a: 0.65 })
   ]);
 
   // Get accessibility variable ID with fallback to brand9
@@ -620,32 +863,18 @@ async function createSemanticVariables(
   const brand9VarId = await findExistingVariable(primitiveCollection, "Brand Scale/9");
   const linkVarId = accessibilityVarId || brand9VarId;
 
-  // Text variables with enhanced fallback
+  // Text & Icon variables with enhanced fallback
   await Promise.all([
-    createSemanticVar("text/text-neutral-primary", "Neutral Scale/12"),
-    createSemanticVar("text/text-neutral-secondary", "Neutral Scale/11"),
-    createSemanticVar("text/text-brand-primary", linkVarId ? "Accessibility/1" : "Brand Scale/9"),
-    createSemanticVar("text/text-on-bg-brand-primary", "Brand Contrast/1"),
-    createSemanticVar("text/text-on-bg-brand-primary-subtle", "Brand Scale/11"),
-    createSemanticVar("text/text-on-bg-error", "Error Contrast/1"),
-    createSemanticVar("text/text-on-bg-error-subtle", "Error Scale/11"),
-    createSemanticVar("text/text-on-bg-success", "Success Contrast/1"),
-    createSemanticVar("text/text-on-bg-success-subtle", "Success Scale/11"),
-    createHardcodedVar("text/text-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
-  ]);
-
-  // Icon variables with enhanced fallback
-  await Promise.all([
-    createSemanticVar("icon/icon-neutral-primary", "Neutral Scale/12"),
-    createSemanticVar("icon/icon-neutral-secondary", "Neutral Scale/11"),
-    createSemanticVar("icon/icon-brand-primary", linkVarId ? "Accessibility/1" : "Brand Scale/9"),
-    createSemanticVar("icon/icon-on-bg-brand-primary", "Brand Contrast/1"),
-    createSemanticVar("icon/icon-on-bg-brand-primary-subtle", "Brand Scale/11"),
-    createSemanticVar("icon/icon-on-bg-error", "Error Contrast/1"),
-    createSemanticVar("icon/icon-on-bg-error-subtle", "Error Scale/11"),
-    createSemanticVar("icon/icon-on-bg-success", "Success Contrast/1"),
-    createSemanticVar("icon/icon-on-bg-success-subtle", "Success Scale/11"),
-    createHardcodedVar("icon/icon-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
+    createSemanticVar("text-icon/ti-neutral-primary", "Neutral Scale/12"),
+    createSemanticVar("text-icon/ti-neutral-secondary", "Neutral Scale/11"),
+    createSemanticVar("text-icon/ti-brand-primary", linkVarId ? "Accessibility/1" : "Brand Scale/9"),
+    createSemanticVar("text-icon/ti-on-bg-brand-primary", "Brand Contrast/1"),
+    createSemanticVar("text-icon/ti-on-bg-brand-primary-subtle", "Brand Scale/11"),
+    createSemanticVar("text-icon/ti-on-bg-error", "Error Contrast/1"),
+    createSemanticVar("text-icon/ti-on-bg-error-subtle", "Error Scale/11"),
+    createSemanticVar("text-icon/ti-on-bg-success", "Success Contrast/1"),
+    createSemanticVar("text-icon/ti-on-bg-success-subtle", "Success Scale/11"),
+    createHardcodedVar("text-icon/ti-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
   ]);
 
   // Background variables
@@ -667,14 +896,14 @@ async function createSemanticVariables(
 
   // Border variables
   await Promise.all([
-    createSemanticVar("border/border-with-surface-neutral-primary", "Neutral Scale/7"), // Updated from border-with-any-surface
-    createSemanticVar("border/border-with-surface-secondary", "Neutral Scale/8"), // Updated from border-with-any-surface-emphasized
-    createSemanticVar("border/border-with-bg-brand-primary", "Brand Scale/11"), // Updated from border-with-bg-primary
-    createSemanticVar("border/border-with-bg-brand-primary-subtle", "Brand Scale/8"), // Updated from border-with-bg-primary-subtle
-    createSemanticVar("border/border-with-bg-success", "Success Scale/11"), // Updated from border-with-success
-    createSemanticVar("border/border-with-bg-success-subtle", "Success Scale/8"), // Updated from border-with-success-subtle
-    createSemanticVar("border/border-with-bg-error", "Error Scale/11"), // Updated from border-with-error
-    createSemanticVar("border/border-with-bg-error-subtle", "Error Scale/8") // Updated from border-with-error-subtle
+    createSemanticVar("border/br-with-sf-neutral-primary", "Neutral Scale/7"), // Updated from border-with-any-surface
+    createSemanticVar("border/br-with-sf-neutral-secondary", "Neutral Scale/8"), // Updated from border-with-any-surface-emphasized
+    createSemanticVar("border/br-with-bg-brand-primary", "Brand Scale/11"), // Updated from border-with-bg-primary
+    createSemanticVar("border/br-with-bg-brand-primary-subtle", "Brand Scale/8"), // Updated from border-with-bg-primary-subtle
+    createSemanticVar("border/br-with-bg-success", "Success Scale/11"), // Updated from border-with-success
+    createSemanticVar("border/br-with-bg-success-subtle", "Success Scale/8"), // Updated from border-with-success-subtle
+    createSemanticVar("border/br-with-bg-error", "Error Scale/11"), // Updated from border-with-error
+    createSemanticVar("border/br-with-bg-error-subtle", "Error Scale/8") // Updated from border-with-error-subtle
   ]);
 }
 
@@ -694,70 +923,62 @@ async function createDirectVariables(
 
   // Surface variables
   await Promise.all([
-    createOrUpdateColorVariable(collection, modeId, "surface/surface-neutral-primary", brandTheme.background), // Updated from surface-default
-    createOrUpdateColorVariable(collection, modeId, "surface/surface-neutral-secondary", neutralTheme.accentScale[1]), // Updated from surface-base-secondary
-    createOrUpdateColorVariable(collection, modeId, "surface/surface-brand-primary", brandTheme.accentScale[1]), // Updated from surface-brand-default
-    createOrUpdateColorVariable(collection, modeId, "surface/surface-brand-secondary", brandTheme.accentScale[2]), // Updated from surface-secondary
-    createOrUpdateColorVariable(collection, modeId, "surface/surface-shadow", neutralTheme.accentScaleAlpha[3]),
-    createOrUpdateHardcodedVar(collection, modeId, "surface/surface-overlay", { r: 0, g: 0, b: 0, a: 0.65 })
+    createOrUpdateColorVariable(collection, modeId, "surface/sf-neutral-primary", brandTheme.background), // Updated from surface-default
+    createOrUpdateColorVariable(collection, modeId, "surface/sf-neutral-secondary", neutralTheme.accentScale[1]), // Updated from surface-base-secondary
+    createOrUpdateColorVariable(collection, modeId, "surface/sf-brand-primary", brandTheme.accentScale[1]), // Updated from surface-brand-default
+    createOrUpdateColorVariable(collection, modeId, "surface/sf-brand-primary-emphasized", brandTheme.accentScale[2]), // Updated from surface-brand-secondary
+    createOrUpdateColorVariable(collection, modeId, "surface/sf-shadow", neutralTheme.accentScaleAlpha[3])
   ]);
 
-  // Text variables
+  // Text & Icon variables
   await Promise.all([
-    createOrUpdateColorVariable(collection, modeId, "text/text-neutral-primary", neutralTheme.accentScale[11]),
-    createOrUpdateColorVariable(collection, modeId, "text/text-neutral-secondary", neutralTheme.accentScale[10]),
-    createOrUpdateContrastColorVariable(collection, modeId, "text/text-brand-primary", brandTheme.accentScale[8], brandTheme.background),
-    createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-brand-primary", brandTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-brand-primary-subtle", brandTheme.accentScale[10]),
-    createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-error", errorTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-error-subtle", errorTheme.accentScale[10]),
-    createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-success", successTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "text/text-on-bg-success-subtle", successTheme.accentScale[10]),
-    createOrUpdateHardcodedVar(collection, modeId, "text/text-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
-  ]);
-
-  // Icon variables
-  await Promise.all([
-    createOrUpdateColorVariable(collection, modeId, "icon/icon-neutral-primary", neutralTheme.accentScale[11]),
-    createOrUpdateColorVariable(collection, modeId, "icon/icon-neutral-secondary", neutralTheme.accentScale[10]),
-    createOrUpdateContrastColorVariable(collection, modeId, "icon/icon-brand-primary", brandTheme.accentScale[8], brandTheme.background),
-    createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-brand-primary", brandTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-brand-primary-subtle", brandTheme.accentScale[10]),
-    createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-error", errorTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-error-subtle", errorTheme.accentScale[10]),
-    createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-success", successTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "icon/icon-on-bg-success-subtle", successTheme.accentScale[10]),
-    createOrUpdateHardcodedVar(collection, modeId, "icon/icon-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-neutral-primary", neutralTheme.accentScale[11]),
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-neutral-secondary", neutralTheme.accentScale[10]),
+    createOrUpdateContrastColorVariable(collection, modeId, "text-icon/ti-brand-primary", brandTheme.accentScale[8], brandTheme.background),
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-brand-primary", brandTheme.accentContrast),
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-brand-primary-subtle", brandTheme.accentScale[10]),
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-error", errorTheme.accentContrast),
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-error-subtle", errorTheme.accentScale[10]),
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-success", successTheme.accentContrast),
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-success-subtle", successTheme.accentScale[10])
   ]);
 
   // Background variables
   await Promise.all([
     createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary", brandTheme.accentScale[8]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-strong", brandTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-emphasized", brandTheme.accentScale[9]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle", brandTheme.accentScale[2]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle-strong", brandTheme.accentScale[3]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle-emphasized", brandTheme.accentScale[3]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-overlay", brandTheme.accentScaleAlpha[5]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-error", errorTheme.accentScale[8]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-error-strong", errorTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-error-emphasized", errorTheme.accentScale[9]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle", errorTheme.accentScale[2]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle-strong", errorTheme.accentScale[3]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle-emphasized", errorTheme.accentScale[3]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-success", successTheme.accentScale[8]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-success-strong", successTheme.accentScale[9]),
+    createOrUpdateColorVariable(collection, modeId, "background/bg-success-emphasized", successTheme.accentScale[9]),
     createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle", successTheme.accentScale[2]),
-    createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle-strong", successTheme.accentScale[3])
+    createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle-emphasized", successTheme.accentScale[3])
   ]);
 
   // Border variables
   await Promise.all([
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-surface-neutral-primary", neutralTheme.accentScale[6]), // Updated from border-with-any-surface
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-surface-secondary", neutralTheme.accentScale[7]), // Updated from border-with-any-surface-focus
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-brand-primary", brandTheme.accentScale[10]), // Updated from border-with-bg-primary
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-brand-primary-subtle", brandTheme.accentScale[7]), // Updated from border-with-bg-primary-subtle
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-success", successTheme.accentScale[10]), // Updated from border-with-success
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-success-subtle", successTheme.accentScale[7]), // Updated from border-with-success-subtle
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-error", errorTheme.accentScale[10]), // Updated from border-with-error
-    createOrUpdateColorVariable(collection, modeId, "border/border-with-bg-error-subtle", errorTheme.accentScale[7]) // Updated from border-with-error-subtle
+    createOrUpdateColorVariable(collection, modeId, "border/br-with-sf-neutral-primary", neutralTheme.accentScale[6]), // Updated from border-with-any-surface
+    createOrUpdateColorVariable(collection, modeId, "border/br-with-sf-neutral-secondary", neutralTheme.accentScale[7]), // Updated from border-with-any-surface-focus
+    createOrUpdateColorVariable(collection, modeId, "border/br-with-bg-brand-primary", brandTheme.accentScale[10]), // Updated from border-with-bg-primary
+    createOrUpdateColorVariable(collection, modeId, "border/br-with-bg-brand-primary-subtle", brandTheme.accentScale[7]), // Updated from border-with-bg-primary-subtle
+    createOrUpdateColorVariable(collection, modeId, "border/br-with-bg-success", successTheme.accentScale[10]), // Updated from border-with-success
+    createOrUpdateColorVariable(collection, modeId, "border/br-with-bg-success-subtle", successTheme.accentScale[7]), // Updated from border-with-success-subtle
+    createOrUpdateColorVariable(collection, modeId, "border/br-with-bg-error", errorTheme.accentScale[10]), // Updated from border-with-error
+    createOrUpdateColorVariable(collection, modeId, "border/br-with-bg-error-subtle", errorTheme.accentScale[7]) // Updated from border-with-error-subtle
   ]);
+
+        // Create hardcoded variables when not using primitives
+      console.log(`[createDirectVariables] Creating hardcoded variables for mode: ${modeId}`);
+      await Promise.all([
+        createOrUpdateHardcodedVar(collection, modeId, "surface/sf-overlay", { r: 0, g: 0, b: 0, a: 0.65 }),
+        createOrUpdateHardcodedVar(collection, modeId, "text-icon/ti-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
+      ]);
+      console.log(`[createDirectVariables] Finished creating hardcoded variables`);
 }
 
 // ===============================================
@@ -779,7 +1000,7 @@ interface ButtonStyle {
 type NotificationConfig = {
   message: string;
   bgVar: keyof typeof FALLBACK_COLORS.backgrounds;
-  textVar: keyof typeof FALLBACK_COLORS.text;
+  textVar: string;
 };
 
 type SupportedNode = (FrameNode | TextNode | RectangleNode | EllipseNode | PolygonNode | LineNode | VectorNode) & {
@@ -798,34 +1019,39 @@ const FALLBACK_COLORS: {
     'bg-brand-primary-subtle': { r: 0.9, g: 0.95, b: 1 },
     'bg-error-subtle': { r: 1, g: 0.95, b: 0.95 },
     'bg-success-subtle': { r: 0.95, g: 1, b: 0.95 },
-    'surface-neutral-primary': { r: 1, g: 1, b: 1 },
-    'surface-neutral-secondary': { r: 0.98, g: 0.98, b: 0.98 },
-    'surface-brand-primary': { r: 0.95, g: 0.95, b: 0.95 }
+    'sf-neutral-primary': { r: 1, g: 1, b: 1 },
+    'sf-neutral-secondary': { r: 0.98, g: 0.98, b: 0.98 },
+    'sf-brand-primary': { r: 0.95, g: 0.95, b: 0.95 },
+    'sf-brand-primary-emphasized': { r: 0.9, g: 0.9, b: 0.9 },
+    'sf-shadow': { r: 0, g: 0, b: 0 },
+    'sf-overlay': { r: 0, g: 0, b: 0 }
   },
   text: {
-    'text-neutral-primary': { r: 0, g: 0, b: 0 },
-    'text-neutral-secondary': { r: 0.4, g: 0.4, b: 0.4 },
-    'text-on-bg-brand-primary': { r: 1, g: 1, b: 1 },
-    'text-on-bg-error': { r: 1, g: 1, b: 1 },
-    'text-on-bg-success': { r: 1, g: 1, b: 1 },
-    'text-on-bg-brand-primary-subtle': { r: 0.1, g: 0.6, b: 1 },
-    'text-on-bg-error-subtle': { r: 0.8, g: 0.2, b: 0.2 },
-    'text-on-bg-success-subtle': { r: 0.2, g: 0.8, b: 0.2 }
+    'ti-neutral-primary': { r: 0, g: 0, b: 0 },
+    'ti-neutral-secondary': { r: 0.4, g: 0.4, b: 0.4 },
+    'ti-brand-primary': { r: 0.1, g: 0.6, b: 1 },
+    'ti-on-bg-brand-primary': { r: 1, g: 1, b: 1 },
+    'ti-on-bg-error': { r: 1, g: 1, b: 1 },
+    'ti-on-bg-success': { r: 1, g: 1, b: 1 },
+    'ti-on-bg-brand-primary-subtle': { r: 0.1, g: 0.6, b: 1 },
+    'ti-on-bg-error-subtle': { r: 0.8, g: 0.2, b: 0.2 },
+    'ti-on-bg-success-subtle': { r: 0.2, g: 0.8, b: 0.2 },
+    'ti-on-surface-overlay': { r: 1, g: 1, b: 1 }
   }
 };
 
 const BUTTON_STYLES: Record<ButtonVariant, ButtonStyle> = {
   primary: {
     bg: 'background/bg-brand-primary',
-    text: 'text/text-on-bg-brand-primary'
+    text: 'text-icon/ti-on-bg-brand-primary'
   },
   secondary: {
     bg: 'background/bg-brand-primary-subtle',
-    text: 'text/text-on-bg-brand-primary-subtle'
+    text: 'text-icon/ti-on-bg-brand-primary-subtle'
   },
   destructive: {
     bg: 'background/bg-error',
-    text: 'text/text-on-bg-error'
+    text: 'text-icon/ti-on-bg-error'
   }
 } as const;
 
@@ -945,6 +1171,7 @@ async function exportDemoComponents(collection: VariableCollection, semanticColl
     frame.primaryAxisSizingMode = "FIXED"; // Set to FIXED
     frame.counterAxisSizingMode = "FIXED"; // Set to FIXED
     frame.resize(1560, 520); // Set width and height to 520
+    frame.cornerRadius = 24;
     frame.itemSpacing = 0; // Remove spacing between items
     frame.paddingLeft = 0; // Remove left padding
     frame.paddingRight = 0; // Remove right padding
@@ -952,11 +1179,15 @@ async function exportDemoComponents(collection: VariableCollection, semanticColl
     frame.paddingBottom = 0; // Remove bottom padding
     frame.layoutAlign = "CENTER"; // Center the frame
     frame.counterAxisAlignItems = "CENTER"; // Center children
+    
+    // Position frame on canvas (above the documentation frame)
+    frame.x = 100;
+    frame.y = 100;
 
     // Create three main columns
-      const leftColumn = await createFixedWidthFrame(await createFeaturedCard(semanticCollection || collection), "surface/surface-neutral-primary", semanticCollection || collection);
-  const middleColumn = await createFixedWidthFrame(await createProductList(semanticCollection || collection), "surface/surface-neutral-secondary", semanticCollection || collection);
-  const rightColumn = await createFixedWidthFrame(await createNotifications(semanticCollection || collection), "surface/surface-neutral-primary", semanticCollection || collection);
+      const leftColumn = await createFixedWidthFrame(await createFeaturedCard(semanticCollection || collection), "surface/sf-neutral-primary", semanticCollection || collection);
+  const middleColumn = await createFixedWidthFrame(await createProductList(semanticCollection || collection), "surface/sf-neutral-secondary", semanticCollection || collection);
+  const rightColumn = await createFixedWidthFrame(await createNotifications(semanticCollection || collection), "surface/sf-neutral-primary", semanticCollection || collection);
 
     // Add columns to frame
     frame.appendChild(leftColumn);
@@ -1029,7 +1260,7 @@ async function createButton(
   await applyVariableWithFallback(
     button,
     collection,
-    "surface/surface-neutral-primary", // Set background color to surface/surface-primary
+    "surface/sf-neutral-primary", // Set background color to surface/sf-primary
     'backgrounds'
   );
 
@@ -1037,7 +1268,7 @@ async function createButton(
   await applyVariableWithFallback(
     button,
     collection,
-    "border/border-with-surface-neutral-primary", // Set stroke color to border/border-with-surface
+    "border/br-with-sf-neutral-primary", // Set stroke color to border/br-with-sf
     'backgrounds'
   );
 
@@ -1048,11 +1279,11 @@ async function createButton(
   buttonText.layoutAlign = "CENTER";
   buttonText.textAlignHorizontal = "CENTER";
 
-  // Set text color to "text/text-brand-primary"
+  // Set text color to "text-icon/ti-brand-primary"
   await applyVariableWithFallback(
     buttonText,
     collection,
-    "text/text-brand-primary",
+    "text-icon/ti-brand-primary",
     'text'
   );
 
@@ -1078,7 +1309,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     card,
     collection,
-    "border/border-with-surface-neutral-primary",
+    "border/br-with-sf-neutral-primary",
     'backgrounds'
   );
 
@@ -1086,7 +1317,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     card,
     collection,
-    "surface/surface-brand-primary",
+    "surface/sf-brand-primary",
     'backgrounds'
   );
 
@@ -1101,7 +1332,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     preview,
     collection,
-    "surface/surface-brand-secondary",
+    "surface/sf-brand-primary-emphasized",
     'backgrounds'
   );
 
@@ -1128,7 +1359,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     title,
     collection,
-    "text/text-neutral-primary",
+    "text-icon/ti-neutral-primary",
     'text'
   );
 
@@ -1147,7 +1378,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     description,
     collection,
-    "text/text-neutral-secondary",
+    "text-icon/ti-neutral-secondary",
     'text'
   );
 
@@ -1226,7 +1457,7 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
   await applyVariableWithFallback(
     list,
     collection,
-    "surface/surface-neutral-primary",
+    "surface/sf-neutral-primary",
     'backgrounds'
   );
 
@@ -1234,7 +1465,7 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
   await applyVariableWithFallback(
     list,
     collection,
-    "border/border-with-surface-neutral-primary",
+    "border/br-with-sf-neutral-primary",
     'backgrounds'
   );
 
@@ -1259,7 +1490,7 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
       await applyVariableWithFallback(
         line,
         collection,
-        "border/border-with-surface-neutral-primary",
+        "border/br-with-sf-neutral-primary",
         'backgrounds'
       );
       list.appendChild(line);
@@ -1323,7 +1554,7 @@ async function createProductListItem(
   await applyVariableWithFallback(
     thumbnail,
     collection,
-    "surface/surface-neutral-secondary",
+    "surface/sf-neutral-secondary",
     'backgrounds'
   );
 
@@ -1332,7 +1563,7 @@ async function createProductListItem(
   await applyVariableWithFallback(
     thumbnail,
     collection,
-    "border/border-with-surface-neutral-primary",
+    "border/br-with-sf-neutral-primary",
     'backgrounds'
   );
 
@@ -1352,7 +1583,7 @@ async function createProductListItem(
   await applyVariableWithFallback(
     itemTitle,
     collection,
-    "text/text-neutral-primary",
+    "text-icon/ti-neutral-primary",
     'text'
   );
 
@@ -1370,7 +1601,7 @@ async function createProductListItem(
   await applyVariableWithFallback(
     description,
     collection,
-    "text/text-neutral-secondary",
+    "text-icon/ti-neutral-secondary",
     'text'
   );
 
@@ -1381,7 +1612,7 @@ async function createProductListItem(
   autoLayoutFrame.appendChild(content);
 
   const style = BUTTON_STYLES[buttonVariant];
-          const button = await createButton(collection, "Button", style.bg, "text/text-brand-primary"); // Use "text/text-brand-primary" for mini buttons
+          const button = await createButton(collection, "Button", style.bg, "text-icon/ti-brand-primary"); // Use "text-icon/ti-brand-primary" for mini buttons
   button.primaryAxisSizingMode = "AUTO"; // Hug contents horizontally
   button.counterAxisSizingMode = "AUTO"; // Hug contents vertically
 
@@ -1412,17 +1643,17 @@ async function createNotifications(collection: VariableCollection): Promise<Fram
     { 
       message: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer euismod sodales nam tomer lima consequat.", 
       bgVar: "bg-error-subtle", 
-      textVar: "text-on-bg-error-subtle" 
+      textVar: "text-icon/ti-on-bg-error-subtle" 
     },
     { 
       message: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer euismod sodales nam tomer lima consequat.", 
       bgVar: "bg-success-subtle", 
-      textVar: "text-on-bg-success-subtle" 
+      textVar: "text-icon/ti-on-bg-success-subtle" 
     },
     { 
       message: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer euismod sodales nam tomer lima consequat.", 
               bgVar: "bg-brand-primary-subtle",
-        textVar: "text-on-bg-brand-primary-subtle" 
+        textVar: "text-icon/ti-on-bg-brand-primary-subtle" 
     }
   ];
 
@@ -1444,7 +1675,7 @@ async function createNotification(
   collection: VariableCollection,
   message: string,
   bgVarName: keyof typeof FALLBACK_COLORS.backgrounds,
-  textVarName: keyof typeof FALLBACK_COLORS.text,
+  textVarName: string,
   includeIcon: boolean = false
 ): Promise<FrameNode> {
   const notification = figma.createFrame();
@@ -1475,9 +1706,9 @@ async function createNotification(
   await applyVariableWithFallback(
     notification,
     collection,
-    bgVarName === "bg-error-subtle" ? "border/border-with-bg-error-subtle" :
-    bgVarName === "bg-success-subtle" ? "border/border-with-bg-success-subtle" :
-            "border/border-with-bg-brand-primary-subtle",
+    bgVarName === "bg-error-subtle" ? "border/br-with-bg-error-subtle" :
+    bgVarName === "bg-success-subtle" ? "border/br-with-bg-success-subtle" :
+            "border/br-with-bg-brand-primary-subtle",
     'backgrounds'
   );
 
@@ -1511,7 +1742,7 @@ async function createNotification(
             boundVariables: {
               "color": {
                 type: "VARIABLE_ALIAS",
-                id: (await findVariable(collection, "icon/icon-on-bg-error-subtle"))?.id || ""
+                id: (await findVariable(collection, "text-icon/ti-on-bg-error-subtle"))?.id || ""
               }
             }
           }];
@@ -1547,7 +1778,7 @@ async function createNotification(
         boundVariables: {
           "color": {
             type: "VARIABLE_ALIAS",
-            id: (await findVariable(collection, "icon/icon-on-bg-success-subtle"))?.id || ""
+                          id: (await findVariable(collection, "text-icon/ti-on-bg-success-subtle"))?.id || ""
           }
         }
       }];
@@ -1574,7 +1805,7 @@ async function createNotification(
         boundVariables: {
           "color": {
             type: "VARIABLE_ALIAS",
-            id: (await findVariable(collection, "icon/icon-on-bg-brand-primary-subtle"))?.id || ""
+                          id: (await findVariable(collection, "text-icon/ti-on-bg-brand-primary-subtle"))?.id || ""
           }
         }
       }];
@@ -1605,7 +1836,7 @@ async function createNotification(
   await applyVariableWithFallback(
     text,
     collection,
-    `text/${textVarName}`,
+    textVarName,
     'text'
   );
 
@@ -1626,152 +1857,497 @@ interface RadixTheme {
   background: string;
 }
 
-interface PluginMessage {
-  type: string;
-  hexColor: string;
-  neutral: string;  
-  success: string;  
-  error: string;
-  appearance: "light" | "dark" | "both";
-  includePrimitives: boolean;
-  exportDemo: boolean;  // Add this line
+
+
+// ===============================================
+// Part 7: Documentation Export
+// ===============================================
+
+// Types for documentation
+interface DocumentationItem {
+  name: string;
+  variablePath: string;
+  primitiveSource: string;
+  category: 'surface' | 'text' | 'icon' | 'background' | 'border';
 }
 
-// Main message handler modification
-figma.ui.onmessage = async (msg: PluginMessage) => {
-  if (msg.type === "generate-palette") {
-    const { hexColor, neutral, success, error, appearance, includePrimitives, exportDemo } = msg;
-    try {
-      console.log("Generating palette with message:", msg);
-      const versionNumber = await getNextVersionNumber();
-      console.log("Next version number:", versionNumber);
-      
-      const lightBrandTheme: RadixTheme = generateRadixColors({
-        appearance: "light",
-        accent: hexColor,
-        gray: "#CCCCCC",
-        background: "#FFFFFF"
-      });
+// Documentation data structure
+const DOCUMENTATION_ITEMS: DocumentationItem[] = [
+  // Surface items
+  { name: "Sf-neutral-primary", variablePath: "surface/sf-neutral-primary", primitiveSource: "Background/1", category: 'surface' },
+  { name: "Sf-neutral-secondary", variablePath: "surface/sf-neutral-secondary", primitiveSource: "Neutral Scale/2", category: 'surface' },
+  { name: "Sf-brand-primary", variablePath: "surface/sf-brand-primary", primitiveSource: "Brand Scale/2", category: 'surface' },
+  { name: "Sf-brand-primary-emphasized", variablePath: "surface/sf-brand-primary-emphasized", primitiveSource: "Brand Scale/3", category: 'surface' },
+  { name: "Sf-shadow", variablePath: "surface/sf-shadow", primitiveSource: "Neutral Scale Alpha/4", category: 'surface' },
+  { name: "Sf-overlay", variablePath: "surface/sf-overlay", primitiveSource: "#000000 65%", category: 'surface' },
+  
+  // Text & Icon items
+  { name: "Ti-neutral-primary", variablePath: "text-icon/ti-neutral-primary", primitiveSource: "Neutral Scale/12", category: 'text' },
+  { name: "Ti-neutral-secondary", variablePath: "text-icon/ti-neutral-secondary", primitiveSource: "Neutral Scale/11", category: 'text' },
+  { name: "Ti-brand-primary", variablePath: "text-icon/ti-brand-primary", primitiveSource: "Accessibility/1", category: 'text' },
+  { name: "Ti-on-bg-brand-primary", variablePath: "text-icon/ti-on-bg-brand-primary", primitiveSource: "Brand Contrast/1", category: 'text' },
+  { name: "Ti-on-bg-brand-primary-subtle", variablePath: "text-icon/ti-on-bg-brand-primary-subtle", primitiveSource: "Brand Scale/11", category: 'text' },
+  { name: "Ti-on-bg-error", variablePath: "text-icon/ti-on-bg-error", primitiveSource: "Error Contrast/1", category: 'text' },
+  { name: "Ti-on-bg-error-subtle", variablePath: "text-icon/ti-on-bg-error-subtle", primitiveSource: "Error Scale/11", category: 'text' },
+  { name: "Ti-on-bg-success", variablePath: "text-icon/ti-on-bg-success", primitiveSource: "Success Contrast/1", category: 'text' },
+  { name: "Ti-on-bg-success-subtle", variablePath: "text-icon/ti-on-bg-success-subtle", primitiveSource: "Success Scale/11", category: 'text' },
+  { name: "Ti-on-surface-overlay", variablePath: "text-icon/ti-on-surface-overlay", primitiveSource: "#FFFFFF", category: 'text' },
+  
+  // Background items
+  { name: "Bg-brand-primary", variablePath: "background/bg-brand-primary", primitiveSource: "Brand Scale/9", category: 'background' },
+  { name: "Bg-brand-primary-emphasized", variablePath: "background/bg-brand-primary-emphasized", primitiveSource: "Brand Scale/10", category: 'background' },
+  { name: "Bg-brand-primary-subtle", variablePath: "background/bg-brand-primary-subtle", primitiveSource: "Brand Scale/3", category: 'background' },
+  { name: "Bg-brand-primary-subtle-emphasized", variablePath: "background/bg-brand-primary-subtle-emphasized", primitiveSource: "Brand Scale/4", category: 'background' },
+  { name: "Bg-brand-primary-overlay", variablePath: "background/bg-brand-primary-overlay", primitiveSource: "Brand Scale Alpha/6", category: 'background' },
+  { name: "Bg-error", variablePath: "background/bg-error", primitiveSource: "Error Scale/9", category: 'background' },
+  { name: "Bg-error-emphasized", variablePath: "background/bg-error-emphasized", primitiveSource: "Error Scale/10", category: 'background' },
+  { name: "Bg-error-subtle", variablePath: "background/bg-error-subtle", primitiveSource: "Error Scale/3", category: 'background' },
+  { name: "Bg-error-subtle-emphasized", variablePath: "background/bg-error-subtle-emphasized", primitiveSource: "Error Scale/4", category: 'background' },
+  { name: "Bg-success", variablePath: "background/bg-success", primitiveSource: "Success Scale/9", category: 'background' },
+  { name: "Bg-success-emphasized", variablePath: "background/bg-success-emphasized", primitiveSource: "Success Scale/10", category: 'background' },
+  { name: "Bg-success-subtle", variablePath: "background/bg-success-subtle", primitiveSource: "Success Scale/3", category: 'background' },
+  { name: "Bg-success-subtle-emphasized", variablePath: "background/bg-success-subtle-emphasized", primitiveSource: "Success Scale/4", category: 'background' },
+  
+  // Border items
+  { name: "Br-with-sf-neutral-primary", variablePath: "border/br-with-sf-neutral-primary", primitiveSource: "Neutral Scale/7", category: 'border' },
+  { name: "Br-with-sf-neutral-secondary", variablePath: "border/br-with-sf-neutral-secondary", primitiveSource: "Neutral Scale/8", category: 'border' },
+  { name: "Br-with-bg-brand-primary", variablePath: "border/br-with-bg-brand-primary", primitiveSource: "Brand Scale/11", category: 'border' },
+  { name: "Br-with-bg-brand-primary-subtle", variablePath: "border/br-with-bg-brand-primary-subtle", primitiveSource: "Brand Scale/8", category: 'border' },
+  { name: "Br-with-bg-success", variablePath: "border/br-with-bg-success", primitiveSource: "Success Scale/11", category: 'border' },
+  { name: "Br-with-bg-success-subtle", variablePath: "border/br-with-bg-success-subtle", primitiveSource: "Success Scale/8", category: 'border' },
+  { name: "Br-with-bg-error", variablePath: "border/br-with-bg-error", primitiveSource: "Error Scale/11", category: 'border' },
+  { name: "Br-with-bg-error-subtle", variablePath: "border/br-with-bg-error-subtle", primitiveSource: "Error Scale/8", category: 'border' }
+];
 
-      const lightNeutralTheme: RadixTheme = generateRadixColors({
-        appearance: "light",
-        accent: neutral,
-        gray: "#CCCCCC",
-        background: "#FFFFFF"
-      });
+// Main documentation export function
+async function exportDocumentation(collection: VariableCollection, semanticCollection: VariableCollection | null = null) {
+  try {
+    // Load required fonts
+    await Promise.all([
+      figma.loadFontAsync({ family: "Inter", style: "Regular" }),
+      figma.loadFontAsync({ family: "Inter", style: "Medium" }),
+      figma.loadFontAsync({ family: "Inter", style: "Bold" })
+    ]);
+    
+    // Create main frame
+    const frame = figma.createFrame();
+    frame.name = "CCS Documentation";
+    frame.layoutMode = "VERTICAL";
+    frame.primaryAxisSizingMode = "AUTO";
+    frame.counterAxisSizingMode = "FIXED";
+    frame.paddingLeft = 0;
+    frame.paddingRight = 0;
+    frame.paddingTop = 0;
+    frame.paddingBottom = 80;
+    frame.itemSpacing = 0;
+    frame.cornerRadius = 24;
+    frame.resize(1093, frame.height);
+    
+    // Position frame on canvas
+    frame.x = 100;
+    frame.y = 800;
+    
+    // Apply surface color variable to frame background
+    await applyVariableWithFallback(frame, semanticCollection || collection, "surface/sf-neutral-primary", 'backgrounds');
 
-      const lightErrorTheme: RadixTheme = generateRadixColors({
-        appearance: "light",
-        accent: error,
-        gray: "#CCCCCC",
-        background: "#FFFFFF"
-      });
+    // Create title container
+const titleContainer = figma.createFrame();
+titleContainer.name = "Title Container";
+titleContainer.layoutMode = "VERTICAL";
+titleContainer.primaryAxisSizingMode = "AUTO";
+titleContainer.counterAxisSizingMode = "AUTO";
+titleContainer.paddingLeft = 120;
+titleContainer.paddingRight = 120;
+titleContainer.paddingTop = 104;
+titleContainer.paddingBottom = 56;
+titleContainer.itemSpacing = 0;
+titleContainer.layoutAlign = "STRETCH";
+    // Apply surface-neutral-secondary background
+await applyVariableWithFallback(titleContainer, semanticCollection || collection, "surface/sf-neutral-secondary", 'backgrounds');
+frame.appendChild(titleContainer);
 
-      const lightSuccessTheme: RadixTheme = generateRadixColors({
-        appearance: "light",
-        accent: success,
-        gray: "#CCCCCC",
-        background: "#FFFFFF"
-      });
+    // Add title
+    const title = figma.createText();
+    title.characters = "Color";
+    title.fontSize = 32;
+    title.fontName = { family: "Inter", style: "Bold" };
+    title.textAutoResize = "HEIGHT";
+    // Apply text color variable
+    await applyVariableWithFallback(title, semanticCollection || collection, "text-icon/ti-neutral-primary", 'text');
+    titleContainer.appendChild(title);
 
-      const darkBrandTheme: RadixTheme = generateRadixColors({
-        appearance: "dark",
-        accent: hexColor,
-        gray: "#555555",
-        background: "#1C1C1C" // Updated from #161616
-      });
-
-      const darkNeutralTheme: RadixTheme = generateRadixColors({
-        appearance: "dark",
-        accent: neutral,
-        gray: "#555555",
-        background: "#1C1C1C" // Updated from #161616
-      });
-
-      const darkErrorTheme: RadixTheme = generateRadixColors({
-        appearance: "dark",
-        accent: error,
-        gray: "#555555",
-        background: "#1C1C1C" // Updated from #161616
-      });
-
-      const darkSuccessTheme: RadixTheme = generateRadixColors({
-        appearance: "dark",
-        accent: success,
-        gray: "#555555",
-        background: "#1C1C1C" // Updated from #161616
-      });
-
-      let primitiveCollection: VariableCollection | null = null;
-      let collection: VariableCollection | null = null;
-      let semanticCollection: VariableCollection | null = null;
-
-      if (includePrimitives) {
-        primitiveCollection = figma.variables.createVariableCollection(`CCS Primitives ${versionNumber}`);
-        semanticCollection = figma.variables.createVariableCollection(`CCS Semantics ${versionNumber}`);
-
-        if (appearance === "light" || appearance === "both") {
-          const lightMode = primitiveCollection.modes[0];
-          primitiveCollection.renameMode(lightMode.modeId, "Light");
-          await createPrimitiveVariables(primitiveCollection, lightMode.modeId, lightBrandTheme, 
-            lightNeutralTheme, lightSuccessTheme, lightErrorTheme);
-        }
-
-        if (appearance === "dark" || appearance === "both") {
-          const darkModeId = appearance === "both" ? 
-            primitiveCollection.addMode("Dark") : primitiveCollection.modes[0].modeId;
-          await createPrimitiveVariables(primitiveCollection, darkModeId, darkBrandTheme, 
-            darkNeutralTheme, darkSuccessTheme, darkErrorTheme);
-        }
-
-        await createSemanticVariables(semanticCollection, primitiveCollection, appearance);
-
-        // Create demo components if enabled
-        if (exportDemo) {
-          await exportDemoComponents(primitiveCollection, semanticCollection);
-        }
-      } else {
-        collection = figma.variables.createVariableCollection(`CCS ${versionNumber}`);
+    // Group items by category
+    const categories = ['surface', 'text', 'icon', 'background', 'border'];
+    
+    for (let i = 0; i < categories.length; i++) {
+      const category = categories[i];
+      const categoryItems = DOCUMENTATION_ITEMS.filter(item => item.category === category);
+      if (categoryItems.length > 0) {
+        const isFirstSection = i === 0;
+        const categorySection = await createCategorySection(category, categoryItems, semanticCollection || collection, isFirstSection);
+        frame.appendChild(categorySection);
         
-        if (appearance === "light" || appearance === "both") {
-          const lightMode = collection.modes[0];
-          collection.renameMode(lightMode.modeId, "Light");
-          await createDirectVariables(collection, lightMode.modeId, lightBrandTheme, 
-            lightNeutralTheme, lightSuccessTheme, lightErrorTheme);
+        // Add separator line between sections (except after the last section)
+        if (i < categories.length - 1) {
+          const sectionSeparator = figma.createLine();
+          sectionSeparator.name = `Section Separator ${category}`;
+          sectionSeparator.strokeWeight = 0.33;
+          sectionSeparator.layoutAlign = "STRETCH";
+          sectionSeparator.resize(1093, 0); // Full width of the frame
+          // Apply border color variable for the separator line
+          await applyVariableWithFallback(sectionSeparator, semanticCollection || collection, "border/br-with-sf-neutral-primary", 'backgrounds');
+          frame.appendChild(sectionSeparator);
         }
-
-        if (appearance === "dark" || appearance === "both") {
-          const darkModeId = appearance === "both" ? 
-            collection.addMode("Dark") : collection.modes[0].modeId;
-          await createDirectVariables(collection, darkModeId, darkBrandTheme, 
-            darkNeutralTheme, darkSuccessTheme, darkErrorTheme);
-        }
-
-        // Create demo components if enabled
-        if (exportDemo) {
-          await exportDemoComponents(collection);
-        }
-      }
-
-      if (!isClosing) {
-        figma.notify(`Successfully created color system with version ${versionNumber}`);
-        figma.ui.postMessage('complete');
-      }
-    } catch (err) {
-      if (!isClosing) {
-        figma.notify("Error generating variables.");
-        console.error("Error generating variables:", err);
-        figma.ui.postMessage('complete');
-      }
-    } finally {
-      if (!isClosing) {
-        isClosing = true;
-        figma.ui.postMessage('complete');
-        setTimeout(() => {
-          figma.closePlugin();
-        }, 100);
       }
     }
+
+    return frame;
+  } catch (error) {
+    console.error('Error in exportDocumentation:', error);
+    figma.notify('Error creating documentation');
+    throw error;
   }
-};
+}
+
+// Create category section
+async function createCategorySection(category: string, items: DocumentationItem[], collection: VariableCollection, isFirstSection: boolean = false): Promise<FrameNode> {
+  const section = figma.createFrame();
+  section.name = `${category.charAt(0).toUpperCase() + category.slice(1)} Section`;
+  section.layoutMode = "VERTICAL";
+  section.primaryAxisSizingMode = "AUTO";
+  section.counterAxisSizingMode = "FIXED";
+  section.paddingLeft = 120;
+  section.paddingRight = 120;
+  section.paddingTop = isFirstSection ? 40 : 40;
+  section.paddingBottom = 40;
+  section.itemSpacing = 0;
+  section.fills = [];
+  section.layoutAlign = "STRETCH";
+  
+  // No top borders for any sections
+
+  // Add category heading
+  const headingContainer = figma.createFrame();
+  headingContainer.name = "Heading Container";
+  headingContainer.layoutMode = "VERTICAL";
+  headingContainer.primaryAxisSizingMode = "AUTO";
+  headingContainer.counterAxisSizingMode = "AUTO";
+  headingContainer.paddingBottom = 16;
+  headingContainer.fills = [];
+  headingContainer.layoutAlign = "STRETCH";
+  
+  const heading = figma.createText();
+  heading.characters = category.charAt(0).toUpperCase() + category.slice(1);
+  heading.fontSize = 18;
+  heading.fontName = { family: "Inter", style: "Bold" };
+  heading.textAutoResize = "HEIGHT";
+  heading.layoutAlign = "STRETCH";
+  // Apply text color variable
+  await applyVariableWithFallback(heading, collection, "text-icon/ti-neutral-secondary", 'text');
+  
+  headingContainer.appendChild(heading);
+  section.appendChild(headingContainer);
+
+  // Create content wrapper (no padding, full width)
+  const contentWrapper = figma.createFrame();
+  contentWrapper.name = "Content Wrapper";
+  contentWrapper.layoutMode = "VERTICAL";
+  contentWrapper.primaryAxisSizingMode = "AUTO";
+  contentWrapper.counterAxisSizingMode = "FIXED";
+  contentWrapper.itemSpacing = 0;
+  contentWrapper.fills = [];
+  contentWrapper.layoutAlign = "STRETCH";
+  contentWrapper.resize(853, contentWrapper.height); // 1093 - 240 (padding)
+  section.appendChild(contentWrapper);
+
+  // Add column headers (hidden)
+  // const headerRow = await createHeaderRow(category, collection);
+  // contentWrapper.appendChild(headerRow);
+
+  // Add line above the first row with values (hidden)
+  // const topSeparator = figma.createLine();
+  // topSeparator.strokeWeight = 0.5;
+  // topSeparator.layoutAlign = "STRETCH";
+          // await applyVariableWithFallback(topSeparator, collection, "border/br-with-sf-neutral-primary-primary", 'backgrounds');
+  // contentWrapper.appendChild(topSeparator);
+
+  // Add items
+  for (let i = 0; i < items.length; i++) {
+    const isLastItem = i === items.length - 1;
+    const itemRow = await createItemRow(items[i], collection, isLastItem);
+    contentWrapper.appendChild(itemRow);
+    
+    // Add separator line (except for last item)
+    if (i < items.length - 1) {
+      const separator = figma.createLine();
+      separator.strokeWeight = 0.5;
+      separator.layoutAlign = "STRETCH";
+              await applyVariableWithFallback(separator, collection, "border/br-with-sf-neutral-primary", 'backgrounds');
+      contentWrapper.appendChild(separator);
+    }
+  }
+
+  return section;
+}
+
+// Create header row
+async function createHeaderRow(category: string, collection: VariableCollection): Promise<FrameNode> {
+  const headerRow = figma.createFrame();
+  headerRow.name = "Header Row";
+  headerRow.layoutMode = "HORIZONTAL";
+  headerRow.primaryAxisSizingMode = "FIXED";
+  headerRow.counterAxisSizingMode = "AUTO";
+  headerRow.paddingTop = 32;
+  headerRow.paddingBottom = 12;
+  headerRow.itemSpacing = 16;
+  headerRow.fills = [];
+  headerRow.layoutAlign = "STRETCH";
+
+  // Style Name header
+  const styleNameHeader = figma.createText();
+  styleNameHeader.characters = "Style Name";
+  styleNameHeader.fontSize = 12;
+  styleNameHeader.fontName = { family: "Inter", style: "Medium" };
+  styleNameHeader.textAutoResize = "HEIGHT";
+  styleNameHeader.resize(375, styleNameHeader.height);
+  // Apply text color variable
+  await applyVariableWithFallback(styleNameHeader, collection, "text-icon/ti-neutral-secondary", 'text');
+  headerRow.appendChild(styleNameHeader);
+
+  // Primitive header
+  const primitiveHeader = figma.createText();
+  primitiveHeader.characters = "Primitive - Radix";
+  primitiveHeader.fontSize = 12;
+  primitiveHeader.fontName = { family: "Inter", style: "Medium" };
+  primitiveHeader.textAutoResize = "HEIGHT";
+  primitiveHeader.resize(225, primitiveHeader.height);
+  // Apply text color variable
+  await applyVariableWithFallback(primitiveHeader, collection, "text-icon/ti-neutral-secondary", 'text');
+  headerRow.appendChild(primitiveHeader);
+
+  // Hex Value header
+  const hexValueHeader = figma.createText();
+  hexValueHeader.characters = "Hex Value";
+  hexValueHeader.fontSize = 12;
+  hexValueHeader.fontName = { family: "Inter", style: "Medium" };
+  hexValueHeader.textAutoResize = "HEIGHT";
+  hexValueHeader.resize(225, hexValueHeader.height);
+  // Apply text color variable
+  await applyVariableWithFallback(hexValueHeader, collection, "text-icon/ti-neutral-secondary", 'text');
+  headerRow.appendChild(hexValueHeader);
+
+  return headerRow;
+}
+
+// Create item row
+async function createItemRow(item: DocumentationItem, collection: VariableCollection, isLastItem: boolean = false): Promise<FrameNode> {
+  const row = figma.createFrame();
+  row.name = `${item.name} Row`;
+  row.layoutMode = "HORIZONTAL";
+  row.primaryAxisSizingMode = "FIXED";
+  row.counterAxisSizingMode = "AUTO";
+  row.primaryAxisAlignItems = "MIN"; // left aligned
+  row.counterAxisAlignItems = "CENTER"; // middle aligned vertically (equivalent to "Align left" in screenshot)
+  row.paddingTop = 20;
+  row.paddingBottom = 20;
+  row.itemSpacing = 14;
+  row.fills = [];
+  row.layoutAlign = "STRETCH";
+
+  // Color swatch
+  const swatch = figma.createFrame();
+  swatch.name = `${item.name} Swatch`;
+  swatch.resize(24, 24);
+  swatch.cornerRadius = 4;
+  
+  // Handle border swatches differently
+  if (item.category === 'border') {
+    swatch.strokeWeight = 2;
+    // Apply border color variable
+    await applyVariableWithFallback(swatch, collection, item.variablePath, 'backgrounds');
+    // Apply appropriate fill based on the border style
+    if (item.name.includes('brand')) {
+      if (item.name.includes('subtle')) {
+        await applyVariableWithFallback(swatch, collection, "background/bg-brand-primary-subtle", 'backgrounds');
+      } else {
+        await applyVariableWithFallback(swatch, collection, "background/bg-brand-primary", 'backgrounds');
+      }
+    } else if (item.name.includes('success')) {
+      if (item.name.includes('subtle')) {
+        await applyVariableWithFallback(swatch, collection, "background/bg-success-subtle", 'backgrounds');
+      } else {
+        await applyVariableWithFallback(swatch, collection, "background/bg-success", 'backgrounds');
+      }
+    } else if (item.name.includes('error')) {
+      if (item.name.includes('subtle')) {
+        await applyVariableWithFallback(swatch, collection, "background/bg-error-subtle", 'backgrounds');
+      } else {
+        await applyVariableWithFallback(swatch, collection, "background/bg-error", 'backgrounds');
+      }
+    } else {
+      await applyVariableWithFallback(swatch, collection, "surface/sf-neutral-primary", 'backgrounds');
+    }
+  } else {
+    swatch.strokeWeight = 0.5;
+    // Apply border color variable
+    await applyVariableWithFallback(swatch, collection, "border/br-with-sf-neutral-primary", 'backgrounds');
+    // Apply variable color to swatch
+    await applyVariableWithFallback(swatch, collection, item.variablePath, 'backgrounds');
+  }
+  
+  // Style name
+  const styleName = figma.createText();
+  styleName.characters = item.name.toLowerCase();
+  styleName.fontSize = 14;
+  styleName.fontName = { family: "Inter", style: "Regular" };
+  styleName.textAutoResize = "WIDTH_AND_HEIGHT";
+  // Apply text color variable
+  await applyVariableWithFallback(styleName, collection, "text-icon/ti-neutral-primary", 'text');
+  
+  // Create auto-layout frame for swatch and style name
+  const styleContainer = figma.createFrame();
+  styleContainer.name = `${item.name} Style Container`;
+  styleContainer.layoutMode = "HORIZONTAL";
+  styleContainer.primaryAxisSizingMode = "FIXED";
+  styleContainer.counterAxisSizingMode = "AUTO";
+  styleContainer.primaryAxisAlignItems = "MIN"; // left aligned
+  styleContainer.counterAxisAlignItems = "CENTER"; // middle aligned vertically (not "MIN")
+  styleContainer.itemSpacing = 16;
+  styleContainer.fills = [];
+  // Set width to fixed 375px
+  styleContainer.resize(375, styleContainer.height);
+  
+  styleContainer.appendChild(swatch);
+  styleContainer.appendChild(styleName);
+  
+  row.appendChild(styleContainer);
+
+  // Primitive source badge
+  const primitiveBadge = figma.createFrame();
+  primitiveBadge.name = `${item.name} Primitive Badge`;
+  primitiveBadge.layoutMode = "HORIZONTAL";
+  primitiveBadge.primaryAxisSizingMode = "AUTO";
+  primitiveBadge.counterAxisSizingMode = "AUTO";
+  primitiveBadge.paddingLeft = 8;
+  primitiveBadge.paddingRight = 8;
+  primitiveBadge.paddingTop = 4;
+  primitiveBadge.paddingBottom = 4;
+  primitiveBadge.cornerRadius = 6;
+  // Apply background color variable
+  await applyVariableWithFallback(primitiveBadge, collection, "surface/sf-neutral-secondary", 'backgrounds');
+
+  const primitiveText = figma.createText();
+  primitiveText.characters = item.primitiveSource.toLowerCase();
+  primitiveText.fontSize = 12;
+  primitiveText.fontName = { family: "Inter", style: "Regular" };
+  primitiveText.textAutoResize = "HEIGHT";
+  // Apply text color variable
+  await applyVariableWithFallback(primitiveText, collection, "text-icon/ti-neutral-secondary", 'text');
+  primitiveBadge.appendChild(primitiveText);
+
+  // Create parent frame for primitive badge
+  const primitiveContainer = figma.createFrame();
+  primitiveContainer.name = `${item.name} Primitive Container`;
+  primitiveContainer.layoutMode = "HORIZONTAL";
+  primitiveContainer.primaryAxisSizingMode = "AUTO";
+  primitiveContainer.counterAxisSizingMode = "AUTO";
+  primitiveContainer.fills = [];
+  // Set width to 225px
+  primitiveContainer.resize(225, primitiveContainer.height);
+  
+  primitiveContainer.appendChild(primitiveBadge);
+  row.appendChild(primitiveContainer);
+
+  // Hex Value container - now shows multiple hex values for each mode
+  const hexValueContainer = figma.createFrame();
+  hexValueContainer.name = `${item.name} Hex Value Container`;
+  hexValueContainer.layoutMode = "HORIZONTAL";
+  hexValueContainer.primaryAxisSizingMode = "AUTO";
+  hexValueContainer.counterAxisSizingMode = "AUTO";
+  hexValueContainer.itemSpacing = 8; // 8px gap between hex values
+  hexValueContainer.fills = [];
+  // Set width to 225px
+  hexValueContainer.resize(225, hexValueContainer.height);
+  
+  // Get all available hex values for this variable
+  if (variableHexValues.has(item.variablePath)) {
+    const modeMap = variableHexValues.get(item.variablePath)!;
+    const modeIds = Array.from(modeMap.keys());
+    
+    // Sort mode IDs to match the order of variable modes
+    const sortedModeIds = modeIds.sort((a, b) => {
+      // Put "Light" first, then "Dark" if both exist
+      if (a === "Light") return -1;
+      if (b === "Light") return 1;
+      if (a === "Dark") return -1;
+      if (b === "Dark") return 1;
+      return a.localeCompare(b);
+    });
+    
+    // Create a hex value badge for each mode
+    for (const modeId of sortedModeIds) {
+      const hexValue = modeMap.get(modeId)!;
+      
+      const hexValueBadge = figma.createFrame();
+      hexValueBadge.name = `${item.name} Hex Badge ${modeId}`;
+      hexValueBadge.layoutMode = "HORIZONTAL";
+      hexValueBadge.primaryAxisSizingMode = "AUTO";
+      hexValueBadge.counterAxisSizingMode = "AUTO";
+      hexValueBadge.paddingLeft = 8;
+      hexValueBadge.paddingRight = 8;
+      hexValueBadge.paddingTop = 4;
+      hexValueBadge.paddingBottom = 4;
+      hexValueBadge.cornerRadius = 6;
+      // Apply background color variable
+      await applyVariableWithFallback(hexValueBadge, collection, "surface/sf-neutral-secondary", 'backgrounds');
+
+      const hexValueText = figma.createText();
+      // Use the normalizeHex function to ensure 6 characters
+      const normalizedHex = normalizeHex(hexValue);
+      hexValueText.characters = normalizedHex;
+      hexValueText.fontSize = 12;
+      hexValueText.fontName = { family: "Inter", style: "Regular" };
+      hexValueText.textAutoResize = "HEIGHT";
+      hexValueText.textAlignHorizontal = "CENTER";
+      // Apply text color variable
+      await applyVariableWithFallback(hexValueText, collection, "text-icon/ti-neutral-secondary", 'text');
+      hexValueBadge.appendChild(hexValueText);
+      
+      hexValueContainer.appendChild(hexValueBadge);
+    }
+  } else {
+    // Fallback: create a single hex value badge with placeholder
+    const hexValueBadge = figma.createFrame();
+    hexValueBadge.name = `${item.name} Hex Badge Fallback`;
+    hexValueBadge.layoutMode = "HORIZONTAL";
+    hexValueBadge.primaryAxisSizingMode = "AUTO";
+    hexValueBadge.counterAxisSizingMode = "AUTO";
+    hexValueBadge.paddingLeft = 8;
+    hexValueBadge.paddingRight = 8;
+    hexValueBadge.paddingTop = 4;
+    hexValueBadge.paddingBottom = 4;
+    hexValueBadge.cornerRadius = 6;
+          // Apply background color variable
+      await applyVariableWithFallback(hexValueBadge, collection, "surface/sf-neutral-secondary", 'backgrounds');
+
+    const hexValueText = figma.createText();
+    // Try to get hex value using the old method as fallback
+    const hexValue = await getHexValueFromVariable(collection, item.variablePath);
+    // Use the normalizeHex function to ensure 6 characters
+    const normalizedHex = normalizeHex(hexValue);
+    hexValueText.characters = normalizedHex;
+    hexValueText.fontSize = 12;
+    hexValueText.fontName = { family: "Inter", style: "Regular" };
+    hexValueText.textAutoResize = "HEIGHT";
+          // Apply text color variable
+      await applyVariableWithFallback(hexValueText, collection, "text-icon/ti-neutral-secondary", 'text');
+    hexValueBadge.appendChild(hexValueText);
+    
+    hexValueContainer.appendChild(hexValueBadge);
+  }
+  
+  row.appendChild(hexValueContainer);
+
+  return row;
+}
 
