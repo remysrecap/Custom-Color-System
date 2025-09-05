@@ -90,8 +90,7 @@ interface TypographyStyle {
 
 // Font family definitions
 const FONT_FAMILIES = {
-  primary: "GT Standard",
-  secondary: "Product"
+  primary: "GT Standard"
 } as const;
 
 // Typography scale definitions based on the images
@@ -188,7 +187,6 @@ async function createFontSystem(
   
   // Create font family variables
   await createFontVariable(collection, modeId, "Font Family/Primary", 0); // GT Standard
-  await createFontVariable(collection, modeId, "Font Family/Secondary", 1); // Product
   
   // Create typography scale variables
   for (const [scaleName, style] of Object.entries(TYPOGRAPHY_SCALE)) {
