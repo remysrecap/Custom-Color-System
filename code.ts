@@ -178,6 +178,58 @@ async function createFontVariable(
   return variable;
 }
 
+// Function to create Figma text styles
+async function createTextStyles(): Promise<void> {
+  console.log(`Creating Figma text styles`);
+  
+  // Load GT Standard font (fallback to Inter if not available)
+  let fontFamily = "GT Standard";
+  let fontStyle = "Regular";
+  
+  try {
+    await figma.loadFontAsync({ family: "GT Standard", style: "Regular" });
+  } catch (error) {
+    console.log("GT Standard not available, falling back to Inter");
+    fontFamily = "Inter";
+    await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+  }
+  
+  // Create text styles for each typography scale
+  for (const [scaleName, style] of Object.entries(TYPOGRAPHY_SCALE)) {
+    const styleName = `Typography/${scaleName}`;
+    
+    // Determine font style based on weight
+    let currentFontStyle = fontStyle;
+    if (style.fontWeight >= 700) {
+      currentFontStyle = "Bold";
+    } else if (style.fontWeight >= 600) {
+      currentFontStyle = "Semi Bold";
+    } else if (style.fontWeight >= 500) {
+      currentFontStyle = "Medium";
+    }
+    
+    // Try to load the specific font style
+    try {
+      await figma.loadFontAsync({ family: fontFamily, style: currentFontStyle });
+    } catch (error) {
+      console.log(`${fontFamily} ${currentFontStyle} not available, using Regular`);
+      currentFontStyle = "Regular";
+    }
+    
+    // Create the text style
+    const textStyle = figma.createTextStyle();
+    textStyle.name = styleName;
+    textStyle.fontName = { family: fontFamily, style: currentFontStyle };
+    textStyle.fontSize = style.fontSize;
+    textStyle.lineHeight = { value: style.lineHeight, unit: "PIXELS" };
+    textStyle.letterSpacing = { value: style.letterSpacing, unit: "PIXELS" };
+    
+    console.log(`Created text style: ${styleName}`);
+  }
+  
+  console.log(`Text styles created successfully`);
+}
+
 // Font system creation function
 async function createFontSystem(
   collection: VariableCollection,
@@ -204,6 +256,9 @@ async function createFontSystem(
     // Font weight
     await createFontVariable(collection, modeId, `${baseName}/font-weight`, style.fontWeight);
   }
+  
+  // Create Figma text styles
+  await createTextStyles();
   
   console.log(`Font system created successfully for mode: ${modeId}`);
 }
