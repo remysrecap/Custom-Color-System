@@ -243,58 +243,42 @@ async function getHexValueFromVariable(collection: VariableCollection, variableP
       }
     }
     
-    // If not found, try to find the variable and check if it's a semantic reference
+    // If not found, try to find the variable and resolve its value
     const variable = await findVariable(collection, variablePath);
     if (variable) {
-      // For semantic variables, we know they reference primitives
-      if (variablePath.includes('/')) {
-        // This is a semantic variable - it references a primitive
-        // Try to find the primitive it references and get its hex value
-        const primitiveName = variablePath.split('/').pop();
-        if (primitiveName) {
-          // Look for the primitive in the primitives collection
-          const allCollections = await figma.variables.getLocalVariableCollectionsAsync();
-          for (const coll of allCollections) {
-            if (coll.name.includes('Primitives')) {
-              // This is likely the primitives collection
-              const primitiveVar = await findVariable(coll, primitiveName);
-              if (primitiveVar) {
-                // Check if we have the hex value stored for the primitive
-                if (variableHexValues.has(primitiveName)) {
-                  const modeMap = variableHexValues.get(primitiveName)!;
+      // Try to get the actual resolved value from the variable
+      try {
+        const resolvedValue = variable.valuesByMode;
+        const modeIds = Object.keys(resolvedValue);
+        if (modeIds.length > 0) {
+          const firstModeId = modeIds[0];
+          const value = resolvedValue[firstModeId];
+          
+          if (value && typeof value === 'object' && 'type' in value) {
+            if (value.type === 'VARIABLE_ALIAS') {
+              // This is a semantic variable that references a primitive
+              // Try to find the referenced primitive and get its hex value
+              const referencedVar = await figma.variables.getVariableByIdAsync(value.id);
+              if (referencedVar) {
+                // Check if we have the hex value for the referenced primitive
+                if (variableHexValues.has(referencedVar.name)) {
+                  const modeMap = variableHexValues.get(referencedVar.name)!;
                   const firstHex = modeMap.values().next().value;
                   if (firstHex) {
                     return firstHex;
                   }
                 }
               }
-            }
-          }
-          
-          // If we still can't find it, try some common primitive names
-          const commonPrimitiveNames = [
-            "Background/1",
-            "Neutral Scale/2", "Neutral Scale/11", "Neutral Scale/12",
-            "Brand Scale/2", "Brand Scale/3", "Brand Scale/9", "Brand Scale/10", "Brand Scale/11",
-            "Success Scale/3", "Success Scale/4", "Success Scale/9", "Success Scale/10", "Success Scale/11",
-            "Error Scale/3", "Error Scale/4", "Error Scale/9", "Error Scale/10", "Error Scale/11",
-            "Neutral Scale Alpha/4", "Brand Scale Alpha/6"
-          ];
-          
-          for (const commonName of commonPrimitiveNames) {
-            if (variableHexValues.has(commonName)) {
-              const modeMap = variableHexValues.get(commonName)!;
-              const firstHex = modeMap.values().next().value;
-              if (firstHex) {
-                return firstHex;
-              }
+            } else if (value.type === 'SOLID') {
+              // This is a direct color value
+              const color = (value as any).color;
+              const alpha = (value as any).opacity !== undefined ? (value as any).opacity : 1;
+              return rgbaToHex(color.r, color.g, color.b, alpha);
             }
           }
         }
-        return `Semantic: ${variablePath}`;
-      } else {
-        // This might be a primitive variable
-        return `Primitive: ${variablePath}`;
+      } catch (resolveError) {
+        console.error(`Error resolving variable value for ${variablePath}:`, resolveError);
       }
     }
   } catch (error) {
@@ -912,7 +896,7 @@ async function createSemanticVariables(
 
   // Border variables
   await Promise.all([
-    createSemanticVar("border/br-with-sf-neutral", "Neutral Scale/7"), // Updated from border-with-any-surface
+    createSemanticVar("border/br-with-sf-neutral-primary", "Neutral Scale/7"), // Updated from border-with-any-surface
     createSemanticVar("border/br-with-sf-neutral-secondary", "Neutral Scale/8"), // Updated from border-with-any-surface-emphasized
     createSemanticVar("border/br-with-bg-brand-primary", "Brand Scale/11"), // Updated from border-with-bg-primary
     createSemanticVar("border/br-with-bg-brand-primary-subtle", "Brand Scale/8"), // Updated from border-with-bg-primary-subtle
@@ -978,7 +962,7 @@ async function createDirectVariables(
 
   // Border variables
   await Promise.all([
-    createOrUpdateColorVariable(collection, modeId, "border/br-with-sf-neutral", neutralTheme.accentScale[6]), // Updated from border-with-any-surface
+    createOrUpdateColorVariable(collection, modeId, "border/br-with-sf-neutral-primary", neutralTheme.accentScale[6]), // Updated from border-with-any-surface
     createOrUpdateColorVariable(collection, modeId, "border/br-with-sf-neutral-secondary", neutralTheme.accentScale[7]), // Updated from border-with-any-surface-focus
     createOrUpdateColorVariable(collection, modeId, "border/br-with-bg-brand-primary", brandTheme.accentScale[10]), // Updated from border-with-bg-primary
     createOrUpdateColorVariable(collection, modeId, "border/br-with-bg-brand-primary-subtle", brandTheme.accentScale[7]), // Updated from border-with-bg-primary-subtle
@@ -1035,34 +1019,39 @@ const FALLBACK_COLORS: {
     'bg-brand-primary-subtle': { r: 0.9, g: 0.95, b: 1 },
     'bg-error-subtle': { r: 1, g: 0.95, b: 0.95 },
     'bg-success-subtle': { r: 0.95, g: 1, b: 0.95 },
-    'surface-neutral-primary': { r: 1, g: 1, b: 1 },
-    'surface-neutral-secondary': { r: 0.98, g: 0.98, b: 0.98 },
-    'surface-brand-primary': { r: 0.95, g: 0.95, b: 0.95 }
+    'sf-neutral-primary': { r: 1, g: 1, b: 1 },
+    'sf-neutral-secondary': { r: 0.98, g: 0.98, b: 0.98 },
+    'sf-brand-primary': { r: 0.95, g: 0.95, b: 0.95 },
+    'sf-brand-primary-emphasized': { r: 0.9, g: 0.9, b: 0.9 },
+    'sf-shadow': { r: 0, g: 0, b: 0 },
+    'sf-overlay': { r: 0, g: 0, b: 0 }
   },
   text: {
-    'text-neutral-primary': { r: 0, g: 0, b: 0 },
-    'text-neutral-secondary': { r: 0.4, g: 0.4, b: 0.4 },
-    'text-on-bg-brand-primary': { r: 1, g: 1, b: 1 },
-    'text-on-bg-error': { r: 1, g: 1, b: 1 },
-    'text-on-bg-success': { r: 1, g: 1, b: 1 },
-    'text-on-bg-brand-primary-subtle': { r: 0.1, g: 0.6, b: 1 },
-    'text-on-bg-error-subtle': { r: 0.8, g: 0.2, b: 0.2 },
-    'text-on-bg-success-subtle': { r: 0.2, g: 0.8, b: 0.2 }
+    'ti-neutral-primary': { r: 0, g: 0, b: 0 },
+    'ti-neutral-secondary': { r: 0.4, g: 0.4, b: 0.4 },
+    'ti-brand-primary': { r: 0.1, g: 0.6, b: 1 },
+    'ti-on-bg-brand-primary': { r: 1, g: 1, b: 1 },
+    'ti-on-bg-error': { r: 1, g: 1, b: 1 },
+    'ti-on-bg-success': { r: 1, g: 1, b: 1 },
+    'ti-on-bg-brand-primary-subtle': { r: 0.1, g: 0.6, b: 1 },
+    'ti-on-bg-error-subtle': { r: 0.8, g: 0.2, b: 0.2 },
+    'ti-on-bg-success-subtle': { r: 0.2, g: 0.8, b: 0.2 },
+    'ti-on-surface-overlay': { r: 1, g: 1, b: 1 }
   }
 };
 
 const BUTTON_STYLES: Record<ButtonVariant, ButtonStyle> = {
   primary: {
     bg: 'background/bg-brand-primary',
-    text: 'text/text-on-bg-brand-primary'
+    text: 'text-icon/ti-on-bg-brand-primary'
   },
   secondary: {
     bg: 'background/bg-brand-primary-subtle',
-    text: 'text/text-on-bg-brand-primary-subtle'
+    text: 'text-icon/ti-on-bg-brand-primary-subtle'
   },
   destructive: {
     bg: 'background/bg-error',
-    text: 'text/text-on-bg-error'
+    text: 'text-icon/ti-on-bg-error'
   }
 } as const;
 
@@ -1279,7 +1268,7 @@ async function createButton(
   await applyVariableWithFallback(
     button,
     collection,
-    "border/br-with-sf-neutral", // Set stroke color to border/br-with-sf
+    "border/br-with-sf-neutral-primary", // Set stroke color to border/br-with-sf
     'backgrounds'
   );
 
@@ -1320,7 +1309,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     card,
     collection,
-    "border/br-with-sf-neutral",
+    "border/br-with-sf-neutral-primary",
     'backgrounds'
   );
 
@@ -1476,7 +1465,7 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
   await applyVariableWithFallback(
     list,
     collection,
-    "border/br-with-sf-neutral",
+    "border/br-with-sf-neutral-primary",
     'backgrounds'
   );
 
@@ -1501,7 +1490,7 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
       await applyVariableWithFallback(
         line,
         collection,
-        "border/br-with-sf-neutral",
+        "border/br-with-sf-neutral-primary",
         'backgrounds'
       );
       list.appendChild(line);
@@ -1574,7 +1563,7 @@ async function createProductListItem(
   await applyVariableWithFallback(
     thumbnail,
     collection,
-    "border/br-with-sf-neutral",
+    "border/br-with-sf-neutral-primary",
     'backgrounds'
   );
 
@@ -1920,7 +1909,7 @@ const DOCUMENTATION_ITEMS: DocumentationItem[] = [
   { name: "Bg-success-subtle-emphasized", variablePath: "background/bg-success-subtle-emphasized", primitiveSource: "Success Scale/4", category: 'background' },
   
   // Border items
-  { name: "Br-with-sf-neutral", variablePath: "border/br-with-sf-neutral", primitiveSource: "Neutral Scale/7", category: 'border' },
+  { name: "Br-with-sf-neutral-primary", variablePath: "border/br-with-sf-neutral-primary", primitiveSource: "Neutral Scale/7", category: 'border' },
   { name: "Br-with-sf-neutral-secondary", variablePath: "border/br-with-sf-neutral-secondary", primitiveSource: "Neutral Scale/8", category: 'border' },
   { name: "Br-with-bg-brand-primary", variablePath: "border/br-with-bg-brand-primary", primitiveSource: "Brand Scale/11", category: 'border' },
   { name: "Br-with-bg-brand-primary-subtle", variablePath: "border/br-with-bg-brand-primary-subtle", primitiveSource: "Brand Scale/8", category: 'border' },
@@ -1959,7 +1948,7 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
     frame.y = 800;
     
     // Apply surface color variable to frame background
-    await applyVariableWithFallback(frame, collection, "surface/sf-neutral-primary", 'backgrounds');
+    await applyVariableWithFallback(frame, semanticCollection || collection, "surface/sf-neutral-primary", 'backgrounds');
 
     // Create title container
 const titleContainer = figma.createFrame();
@@ -1974,7 +1963,7 @@ titleContainer.paddingBottom = 56;
 titleContainer.itemSpacing = 0;
 titleContainer.layoutAlign = "STRETCH";
     // Apply surface-neutral-secondary background
-await applyVariableWithFallback(titleContainer, collection, "surface/sf-neutral-secondary", 'backgrounds');
+await applyVariableWithFallback(titleContainer, semanticCollection || collection, "surface/sf-neutral-secondary", 'backgrounds');
 frame.appendChild(titleContainer);
 
     // Add title
@@ -1984,7 +1973,7 @@ frame.appendChild(titleContainer);
     title.fontName = { family: "Inter", style: "Bold" };
     title.textAutoResize = "HEIGHT";
     // Apply text color variable
-    await applyVariableWithFallback(title, collection, "text-icon/ti-neutral-primary", 'text');
+    await applyVariableWithFallback(title, semanticCollection || collection, "text-icon/ti-neutral-primary", 'text');
     titleContainer.appendChild(title);
 
     // Group items by category
@@ -2006,7 +1995,7 @@ frame.appendChild(titleContainer);
           sectionSeparator.layoutAlign = "STRETCH";
           sectionSeparator.resize(1093, 0); // Full width of the frame
           // Apply border color variable for the separator line
-          await applyVariableWithFallback(sectionSeparator, collection, "border/br-with-sf-neutral", 'backgrounds');
+          await applyVariableWithFallback(sectionSeparator, semanticCollection || collection, "border/br-with-sf-neutral-primary", 'backgrounds');
           frame.appendChild(sectionSeparator);
         }
       }
@@ -2079,7 +2068,7 @@ async function createCategorySection(category: string, items: DocumentationItem[
   // const topSeparator = figma.createLine();
   // topSeparator.strokeWeight = 0.5;
   // topSeparator.layoutAlign = "STRETCH";
-          // await applyVariableWithFallback(topSeparator, collection, "border/br-with-sf-neutral-primary", 'backgrounds');
+          // await applyVariableWithFallback(topSeparator, collection, "border/br-with-sf-neutral-primary-primary", 'backgrounds');
   // contentWrapper.appendChild(topSeparator);
 
   // Add items
@@ -2093,7 +2082,7 @@ async function createCategorySection(category: string, items: DocumentationItem[
       const separator = figma.createLine();
       separator.strokeWeight = 0.5;
       separator.layoutAlign = "STRETCH";
-              await applyVariableWithFallback(separator, collection, "border/br-with-sf-neutral", 'backgrounds');
+              await applyVariableWithFallback(separator, collection, "border/br-with-sf-neutral-primary", 'backgrounds');
       contentWrapper.appendChild(separator);
     }
   }
@@ -2201,7 +2190,7 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   } else {
     swatch.strokeWeight = 0.5;
     // Apply border color variable
-    await applyVariableWithFallback(swatch, collection, "border/br-with-sf-neutral", 'backgrounds');
+    await applyVariableWithFallback(swatch, collection, "border/br-with-sf-neutral-primary", 'backgrounds');
     // Apply variable color to swatch
     await applyVariableWithFallback(swatch, collection, item.variablePath, 'backgrounds');
   }
