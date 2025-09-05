@@ -866,12 +866,12 @@ async function createSemanticVariables(
 
   // Surface variables
   await Promise.all([
-    createSemanticVar("surface/sfc-neutral-primary", "Background/1"), // Updated from surface-default
-    createSemanticVar("surface/sfc-neutral-secondary", "Neutral Scale/2"), // Updated from surface-base-secondary
-    createSemanticVar("surface/sfc-brand-primary", "Brand Scale/2"), // Updated from surface-brand-default
-    createSemanticVar("surface/sfc-brand-primary-emphasized", "Brand Scale/3"), // Updated from surface-brand-secondary
-    createSemanticVar("surface/sfc-shadow", "Neutral Scale Alpha/4"),
-    createHardcodedVar("surface/sfc-overlay", { r: 0, g: 0, b: 0, a: 0.65 })
+    createSemanticVar("surface/sf-neutral-primary", "Background/1"), // Updated from surface-default
+    createSemanticVar("surface/sf-neutral-secondary", "Neutral Scale/2"), // Updated from surface-base-secondary
+    createSemanticVar("surface/sf-brand-primary", "Brand Scale/2"), // Updated from surface-brand-default
+    createSemanticVar("surface/sf-brand-primary-emphasized", "Brand Scale/3"), // Updated from surface-brand-secondary
+    createSemanticVar("surface/sf-shadow", "Neutral Scale Alpha/4"),
+    createHardcodedVar("surface/sf-overlay", { r: 0, g: 0, b: 0, a: 0.65 })
   ]);
 
   // Get accessibility variable ID with fallback to brand9
@@ -879,32 +879,18 @@ async function createSemanticVariables(
   const brand9VarId = await findExistingVariable(primitiveCollection, "Brand Scale/9");
   const linkVarId = accessibilityVarId || brand9VarId;
 
-  // Text variables with enhanced fallback
+  // Text & Icon variables with enhanced fallback
   await Promise.all([
-    createSemanticVar("text/txt-neutral-primary", "Neutral Scale/12"),
-    createSemanticVar("text/txt-neutral-secondary", "Neutral Scale/11"),
-    createSemanticVar("text/txt-brand-primary", linkVarId ? "Accessibility/1" : "Brand Scale/9"),
-    createSemanticVar("text/txt-on-bg-brand-primary", "Brand Contrast/1"),
-    createSemanticVar("text/txt-on-bg-brand-primary-subtle", "Brand Scale/11"),
-    createSemanticVar("text/txt-on-bg-error", "Error Contrast/1"),
-    createSemanticVar("text/txt-on-bg-error-subtle", "Error Scale/11"),
-    createSemanticVar("text/txt-on-bg-success", "Success Contrast/1"),
-    createSemanticVar("text/txt-on-bg-success-subtle", "Success Scale/11"),
-    createHardcodedVar("text/txt-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
-  ]);
-
-  // Icon variables with enhanced fallback
-  await Promise.all([
-    createSemanticVar("icon/icn-neutral-primary", "Neutral Scale/12"),
-    createSemanticVar("icon/icn-neutral-secondary", "Neutral Scale/11"),
-    createSemanticVar("icon/icn-brand-primary", linkVarId ? "Accessibility/1" : "Brand Scale/9"),
-    createSemanticVar("icon/icn-on-bg-brand-primary", "Brand Contrast/1"),
-    createSemanticVar("icon/icn-on-bg-brand-primary-subtle", "Brand Scale/11"),
-    createSemanticVar("icon/icn-on-bg-error", "Error Contrast/1"),
-    createSemanticVar("icon/icn-on-bg-error-subtle", "Error Scale/11"),
-    createSemanticVar("icon/icn-on-bg-success", "Success Contrast/1"),
-    createSemanticVar("icon/icn-on-bg-success-subtle", "Success Scale/11"),
-    createHardcodedVar("icon/icn-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
+    createSemanticVar("text-icon/ti-neutral-primary", "Neutral Scale/12"),
+    createSemanticVar("text-icon/ti-neutral-secondary", "Neutral Scale/11"),
+    createSemanticVar("text-icon/ti-brand-primary", linkVarId ? "Accessibility/1" : "Brand Scale/9"),
+    createSemanticVar("text-icon/ti-on-bg-brand-primary", "Brand Contrast/1"),
+    createSemanticVar("text-icon/ti-on-bg-brand-primary-subtle", "Brand Scale/11"),
+    createSemanticVar("text-icon/ti-on-bg-error", "Error Contrast/1"),
+    createSemanticVar("text-icon/ti-on-bg-error-subtle", "Error Scale/11"),
+    createSemanticVar("text-icon/ti-on-bg-success", "Success Contrast/1"),
+    createSemanticVar("text-icon/ti-on-bg-success-subtle", "Success Scale/11"),
+    createHardcodedVar("text-icon/ti-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
   ]);
 
   // Background variables
@@ -926,8 +912,8 @@ async function createSemanticVariables(
 
   // Border variables
   await Promise.all([
-    createSemanticVar("border/br-with-surface-neutral", "Neutral Scale/7"), // Updated from border-with-any-surface
-    createSemanticVar("border/br-with-surface-neutral-emphasized", "Neutral Scale/8"), // Updated from border-with-any-surface-emphasized
+    createSemanticVar("border/br-with-sf-neutral", "Neutral Scale/7"), // Updated from border-with-any-surface
+    createSemanticVar("border/br-with-sf-neutral-secondary", "Neutral Scale/8"), // Updated from border-with-any-surface-emphasized
     createSemanticVar("border/br-with-bg-brand-primary", "Brand Scale/11"), // Updated from border-with-bg-primary
     createSemanticVar("border/br-with-bg-brand-primary-subtle", "Brand Scale/8"), // Updated from border-with-bg-primary-subtle
     createSemanticVar("border/br-with-bg-success", "Success Scale/11"), // Updated from border-with-success
@@ -953,37 +939,24 @@ async function createDirectVariables(
 
   // Surface variables
   await Promise.all([
-    createOrUpdateColorVariable(collection, modeId, "surface/sfc-neutral-primary", brandTheme.background), // Updated from surface-default
-    createOrUpdateColorVariable(collection, modeId, "surface/sfc-neutral-secondary", neutralTheme.accentScale[1]), // Updated from surface-base-secondary
-    createOrUpdateColorVariable(collection, modeId, "surface/sfc-brand-primary", brandTheme.accentScale[1]), // Updated from surface-brand-default
-    createOrUpdateColorVariable(collection, modeId, "surface/sfc-brand-primary-emphasized", brandTheme.accentScale[2]), // Updated from surface-brand-secondary
-    createOrUpdateColorVariable(collection, modeId, "surface/sfc-shadow", neutralTheme.accentScaleAlpha[3])
+    createOrUpdateColorVariable(collection, modeId, "surface/sf-neutral-primary", brandTheme.background), // Updated from surface-default
+    createOrUpdateColorVariable(collection, modeId, "surface/sf-neutral-secondary", neutralTheme.accentScale[1]), // Updated from surface-base-secondary
+    createOrUpdateColorVariable(collection, modeId, "surface/sf-brand-primary", brandTheme.accentScale[1]), // Updated from surface-brand-default
+    createOrUpdateColorVariable(collection, modeId, "surface/sf-brand-primary-emphasized", brandTheme.accentScale[2]), // Updated from surface-brand-secondary
+    createOrUpdateColorVariable(collection, modeId, "surface/sf-shadow", neutralTheme.accentScaleAlpha[3])
   ]);
 
-  // Text variables
+  // Text & Icon variables
   await Promise.all([
-    createOrUpdateColorVariable(collection, modeId, "text/txt-neutral-primary", neutralTheme.accentScale[11]),
-    createOrUpdateColorVariable(collection, modeId, "text/txt-neutral-secondary", neutralTheme.accentScale[10]),
-    createOrUpdateContrastColorVariable(collection, modeId, "text/txt-brand-primary", brandTheme.accentScale[8], brandTheme.background),
-    createOrUpdateColorVariable(collection, modeId, "text/txt-on-bg-brand-primary", brandTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "text/txt-on-bg-brand-primary-subtle", brandTheme.accentScale[10]),
-    createOrUpdateColorVariable(collection, modeId, "text/txt-on-bg-error", errorTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "text/txt-on-bg-error-subtle", errorTheme.accentScale[10]),
-    createOrUpdateColorVariable(collection, modeId, "text/txt-on-bg-success", successTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "text/txt-on-bg-success-subtle", successTheme.accentScale[10])
-  ]);
-
-  // Icon variables
-  await Promise.all([
-    createOrUpdateColorVariable(collection, modeId, "icon/icn-neutral-primary", neutralTheme.accentScale[11]),
-    createOrUpdateColorVariable(collection, modeId, "icon/icn-neutral-secondary", neutralTheme.accentScale[10]),
-    createOrUpdateContrastColorVariable(collection, modeId, "icon/icn-brand-primary", brandTheme.accentScale[8], brandTheme.background),
-    createOrUpdateColorVariable(collection, modeId, "icon/icn-on-bg-brand-primary", brandTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "icon/icn-on-bg-brand-primary-subtle", brandTheme.accentScale[10]),
-    createOrUpdateColorVariable(collection, modeId, "icon/icn-on-bg-error", errorTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "icon/icn-on-bg-error-subtle", errorTheme.accentScale[10]),
-    createOrUpdateColorVariable(collection, modeId, "icon/icn-on-bg-success", successTheme.accentContrast),
-    createOrUpdateColorVariable(collection, modeId, "icon/icn-on-bg-success-subtle", successTheme.accentScale[10])
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-neutral-primary", neutralTheme.accentScale[11]),
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-neutral-secondary", neutralTheme.accentScale[10]),
+    createOrUpdateContrastColorVariable(collection, modeId, "text-icon/ti-brand-primary", brandTheme.accentScale[8], brandTheme.background),
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-brand-primary", brandTheme.accentContrast),
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-brand-primary-subtle", brandTheme.accentScale[10]),
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-error", errorTheme.accentContrast),
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-error-subtle", errorTheme.accentScale[10]),
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-success", successTheme.accentContrast),
+    createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-success-subtle", successTheme.accentScale[10])
   ]);
 
   // Background variables
@@ -1005,8 +978,8 @@ async function createDirectVariables(
 
   // Border variables
   await Promise.all([
-    createOrUpdateColorVariable(collection, modeId, "border/br-with-surface-neutral", neutralTheme.accentScale[6]), // Updated from border-with-any-surface
-    createOrUpdateColorVariable(collection, modeId, "border/br-with-surface-neutral-emphasized", neutralTheme.accentScale[7]), // Updated from border-with-any-surface-focus
+    createOrUpdateColorVariable(collection, modeId, "border/br-with-sf-neutral", neutralTheme.accentScale[6]), // Updated from border-with-any-surface
+    createOrUpdateColorVariable(collection, modeId, "border/br-with-sf-neutral-secondary", neutralTheme.accentScale[7]), // Updated from border-with-any-surface-focus
     createOrUpdateColorVariable(collection, modeId, "border/br-with-bg-brand-primary", brandTheme.accentScale[10]), // Updated from border-with-bg-primary
     createOrUpdateColorVariable(collection, modeId, "border/br-with-bg-brand-primary-subtle", brandTheme.accentScale[7]), // Updated from border-with-bg-primary-subtle
     createOrUpdateColorVariable(collection, modeId, "border/br-with-bg-success", successTheme.accentScale[10]), // Updated from border-with-success
@@ -1018,9 +991,8 @@ async function createDirectVariables(
         // Create hardcoded variables when not using primitives
       console.log(`[createDirectVariables] Creating hardcoded variables for mode: ${modeId}`);
       await Promise.all([
-        createOrUpdateHardcodedVar(collection, modeId, "surface/sfc-overlay", { r: 0, g: 0, b: 0, a: 0.65 }),
-        createOrUpdateHardcodedVar(collection, modeId, "text/txt-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 }),
-        createOrUpdateHardcodedVar(collection, modeId, "icon/icn-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
+        createOrUpdateHardcodedVar(collection, modeId, "surface/sf-overlay", { r: 0, g: 0, b: 0, a: 0.65 }),
+        createOrUpdateHardcodedVar(collection, modeId, "text-icon/ti-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
       ]);
       console.log(`[createDirectVariables] Finished creating hardcoded variables`);
 }
@@ -1224,9 +1196,9 @@ async function exportDemoComponents(collection: VariableCollection, semanticColl
     frame.y = 100;
 
     // Create three main columns
-      const leftColumn = await createFixedWidthFrame(await createFeaturedCard(semanticCollection || collection), "surface/sfc-neutral-primary", semanticCollection || collection);
-  const middleColumn = await createFixedWidthFrame(await createProductList(semanticCollection || collection), "surface/sfc-neutral-secondary", semanticCollection || collection);
-  const rightColumn = await createFixedWidthFrame(await createNotifications(semanticCollection || collection), "surface/sfc-neutral-primary", semanticCollection || collection);
+      const leftColumn = await createFixedWidthFrame(await createFeaturedCard(semanticCollection || collection), "surface/sf-neutral-primary", semanticCollection || collection);
+  const middleColumn = await createFixedWidthFrame(await createProductList(semanticCollection || collection), "surface/sf-neutral-secondary", semanticCollection || collection);
+  const rightColumn = await createFixedWidthFrame(await createNotifications(semanticCollection || collection), "surface/sf-neutral-primary", semanticCollection || collection);
 
     // Add columns to frame
     frame.appendChild(leftColumn);
@@ -1299,7 +1271,7 @@ async function createButton(
   await applyVariableWithFallback(
     button,
     collection,
-    "surface/sfc-neutral-primary", // Set background color to surface/sfc-primary
+    "surface/sf-neutral-primary", // Set background color to surface/sf-primary
     'backgrounds'
   );
 
@@ -1307,7 +1279,7 @@ async function createButton(
   await applyVariableWithFallback(
     button,
     collection,
-    "border/br-with-surface-neutral", // Set stroke color to border/br-with-surface
+    "border/br-with-sf-neutral", // Set stroke color to border/br-with-sf
     'backgrounds'
   );
 
@@ -1318,11 +1290,11 @@ async function createButton(
   buttonText.layoutAlign = "CENTER";
   buttonText.textAlignHorizontal = "CENTER";
 
-  // Set text color to "text/txt-brand-primary"
+  // Set text color to "text-icon/ti-brand-primary"
   await applyVariableWithFallback(
     buttonText,
     collection,
-    "text/txt-brand-primary",
+    "text-icon/ti-brand-primary",
     'text'
   );
 
@@ -1348,7 +1320,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     card,
     collection,
-    "border/br-with-surface-neutral",
+    "border/br-with-sf-neutral",
     'backgrounds'
   );
 
@@ -1356,7 +1328,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     card,
     collection,
-    "surface/sfc-brand-primary",
+    "surface/sf-brand-primary",
     'backgrounds'
   );
 
@@ -1371,7 +1343,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     preview,
     collection,
-    "surface/sfc-brand-primary-emphasized",
+    "surface/sf-brand-primary-emphasized",
     'backgrounds'
   );
 
@@ -1398,7 +1370,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     title,
     collection,
-    "text/txt-neutral-primary",
+    "text-icon/ti-neutral-primary",
     'text'
   );
 
@@ -1417,7 +1389,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   await applyVariableWithFallback(
     description,
     collection,
-    "text/txt-neutral-secondary",
+    "text-icon/ti-neutral-secondary",
     'text'
   );
 
@@ -1496,7 +1468,7 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
   await applyVariableWithFallback(
     list,
     collection,
-    "surface/sfc-neutral-primary",
+    "surface/sf-neutral-primary",
     'backgrounds'
   );
 
@@ -1504,7 +1476,7 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
   await applyVariableWithFallback(
     list,
     collection,
-    "border/br-with-surface-neutral",
+    "border/br-with-sf-neutral",
     'backgrounds'
   );
 
@@ -1529,7 +1501,7 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
       await applyVariableWithFallback(
         line,
         collection,
-        "border/br-with-surface-neutral",
+        "border/br-with-sf-neutral",
         'backgrounds'
       );
       list.appendChild(line);
@@ -1593,7 +1565,7 @@ async function createProductListItem(
   await applyVariableWithFallback(
     thumbnail,
     collection,
-    "surface/sfc-neutral-secondary",
+    "surface/sf-neutral-secondary",
     'backgrounds'
   );
 
@@ -1602,7 +1574,7 @@ async function createProductListItem(
   await applyVariableWithFallback(
     thumbnail,
     collection,
-    "border/br-with-surface-neutral",
+    "border/br-with-sf-neutral",
     'backgrounds'
   );
 
@@ -1622,7 +1594,7 @@ async function createProductListItem(
   await applyVariableWithFallback(
     itemTitle,
     collection,
-    "text/txt-neutral-primary",
+    "text-icon/ti-neutral-primary",
     'text'
   );
 
@@ -1640,7 +1612,7 @@ async function createProductListItem(
   await applyVariableWithFallback(
     description,
     collection,
-    "text/txt-neutral-secondary",
+    "text-icon/ti-neutral-secondary",
     'text'
   );
 
@@ -1651,7 +1623,7 @@ async function createProductListItem(
   autoLayoutFrame.appendChild(content);
 
   const style = BUTTON_STYLES[buttonVariant];
-          const button = await createButton(collection, "Button", style.bg, "text/txt-brand-primary"); // Use "text/txt-brand-primary" for mini buttons
+          const button = await createButton(collection, "Button", style.bg, "text-icon/ti-brand-primary"); // Use "text-icon/ti-brand-primary" for mini buttons
   button.primaryAxisSizingMode = "AUTO"; // Hug contents horizontally
   button.counterAxisSizingMode = "AUTO"; // Hug contents vertically
 
@@ -1682,17 +1654,17 @@ async function createNotifications(collection: VariableCollection): Promise<Fram
     { 
       message: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer euismod sodales nam tomer lima consequat.", 
       bgVar: "bg-error-subtle", 
-      textVar: "text/txt-on-bg-error-subtle" 
+      textVar: "text-icon/ti-on-bg-error-subtle" 
     },
     { 
       message: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer euismod sodales nam tomer lima consequat.", 
       bgVar: "bg-success-subtle", 
-      textVar: "text/txt-on-bg-success-subtle" 
+      textVar: "text-icon/ti-on-bg-success-subtle" 
     },
     { 
       message: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer euismod sodales nam tomer lima consequat.", 
               bgVar: "bg-brand-primary-subtle",
-        textVar: "text/txt-on-bg-brand-primary-subtle" 
+        textVar: "text-icon/ti-on-bg-brand-primary-subtle" 
     }
   ];
 
@@ -1781,7 +1753,7 @@ async function createNotification(
             boundVariables: {
               "color": {
                 type: "VARIABLE_ALIAS",
-                id: (await findVariable(collection, "icon/icn-on-bg-error-subtle"))?.id || ""
+                id: (await findVariable(collection, "text-icon/ti-on-bg-error-subtle"))?.id || ""
               }
             }
           }];
@@ -1817,7 +1789,7 @@ async function createNotification(
         boundVariables: {
           "color": {
             type: "VARIABLE_ALIAS",
-                          id: (await findVariable(collection, "icon/icn-on-bg-success-subtle"))?.id || ""
+                          id: (await findVariable(collection, "text-icon/ti-on-bg-success-subtle"))?.id || ""
           }
         }
       }];
@@ -1844,7 +1816,7 @@ async function createNotification(
         boundVariables: {
           "color": {
             type: "VARIABLE_ALIAS",
-                          id: (await findVariable(collection, "icon/icn-on-bg-brand-primary-subtle"))?.id || ""
+                          id: (await findVariable(collection, "text-icon/ti-on-bg-brand-primary-subtle"))?.id || ""
           }
         }
       }];
@@ -1913,36 +1885,24 @@ interface DocumentationItem {
 // Documentation data structure
 const DOCUMENTATION_ITEMS: DocumentationItem[] = [
   // Surface items
-  { name: "Sfc-neutral-primary", variablePath: "surface/sfc-neutral-primary", primitiveSource: "Background/1", category: 'surface' },
-  { name: "Sfc-neutral-secondary", variablePath: "surface/sfc-neutral-secondary", primitiveSource: "Neutral Scale/2", category: 'surface' },
-  { name: "Sfc-brand-primary", variablePath: "surface/sfc-brand-primary", primitiveSource: "Brand Scale/2", category: 'surface' },
-  { name: "Sfc-brand-primary-emphasized", variablePath: "surface/sfc-brand-primary-emphasized", primitiveSource: "Brand Scale/3", category: 'surface' },
-  { name: "Sfc-shadow", variablePath: "surface/sfc-shadow", primitiveSource: "Neutral Scale Alpha/4", category: 'surface' },
-  { name: "Sfc-overlay", variablePath: "surface/sfc-overlay", primitiveSource: "#000000 65%", category: 'surface' },
+  { name: "Sf-neutral-primary", variablePath: "surface/sf-neutral-primary", primitiveSource: "Background/1", category: 'surface' },
+  { name: "Sf-neutral-secondary", variablePath: "surface/sf-neutral-secondary", primitiveSource: "Neutral Scale/2", category: 'surface' },
+  { name: "Sf-brand-primary", variablePath: "surface/sf-brand-primary", primitiveSource: "Brand Scale/2", category: 'surface' },
+  { name: "Sf-brand-primary-emphasized", variablePath: "surface/sf-brand-primary-emphasized", primitiveSource: "Brand Scale/3", category: 'surface' },
+  { name: "Sf-shadow", variablePath: "surface/sf-shadow", primitiveSource: "Neutral Scale Alpha/4", category: 'surface' },
+  { name: "Sf-overlay", variablePath: "surface/sf-overlay", primitiveSource: "#000000 65%", category: 'surface' },
   
-  // Text items
-  { name: "Txt-neutral-primary", variablePath: "text/txt-neutral-primary", primitiveSource: "Neutral Scale/12", category: 'text' },
-  { name: "Txt-neutral-secondary", variablePath: "text/txt-neutral-secondary", primitiveSource: "Neutral Scale/11", category: 'text' },
-  { name: "Txt-brand-primary", variablePath: "text/txt-brand-primary", primitiveSource: "Accessibility/1", category: 'text' },
-  { name: "Txt-on-bg-brand-primary", variablePath: "text/txt-on-bg-brand-primary", primitiveSource: "Brand Contrast/1", category: 'text' },
-  { name: "Txt-on-bg-brand-primary-subtle", variablePath: "text/txt-on-bg-brand-primary-subtle", primitiveSource: "Brand Scale/11", category: 'text' },
-  { name: "Txt-on-bg-error", variablePath: "text/txt-on-bg-error", primitiveSource: "Error Contrast/1", category: 'text' },
-  { name: "Txt-on-bg-error-subtle", variablePath: "text/txt-on-bg-error-subtle", primitiveSource: "Error Scale/11", category: 'text' },
-  { name: "Txt-on-bg-success", variablePath: "text/txt-on-bg-success", primitiveSource: "Success Contrast/1", category: 'text' },
-  { name: "Txt-on-bg-success-subtle", variablePath: "text/txt-on-bg-success-subtle", primitiveSource: "Success Scale/11", category: 'text' },
-  { name: "Txt-on-surface-overlay", variablePath: "text/txt-on-surface-overlay", primitiveSource: "#FFFFFF", category: 'text' },
-  
-  // Icon items
-  { name: "Icn-neutral-primary", variablePath: "icon/icn-neutral-primary", primitiveSource: "Neutral Scale/12", category: 'icon' },
-  { name: "Icn-neutral-secondary", variablePath: "icon/icn-neutral-secondary", primitiveSource: "Neutral Scale/11", category: 'icon' },
-  { name: "Icn-brand-primary", variablePath: "icon/icn-brand-primary", primitiveSource: "Accessibility/1", category: 'icon' },
-  { name: "Icn-on-bg-brand-primary", variablePath: "icon/icn-on-bg-brand-primary", primitiveSource: "Brand Contrast/1", category: 'icon' },
-  { name: "Icn-on-bg-brand-primary-subtle", variablePath: "icon/icn-on-bg-brand-primary-subtle", primitiveSource: "Brand Scale/11", category: 'icon' },
-  { name: "Icn-on-bg-error", variablePath: "icon/icn-on-bg-error", primitiveSource: "Error Contrast/1", category: 'icon' },
-  { name: "Icn-on-bg-error-subtle", variablePath: "icon/icn-on-bg-error-subtle", primitiveSource: "Error Scale/11", category: 'icon' },
-  { name: "Icn-on-bg-success", variablePath: "icon/icn-on-bg-success", primitiveSource: "Success Contrast/1", category: 'icon' },
-  { name: "Icn-on-bg-success-subtle", variablePath: "icon/icn-on-bg-success-subtle", primitiveSource: "Success Scale/11", category: 'icon' },
-  { name: "Icn-on-surface-overlay", variablePath: "icon/icn-on-surface-overlay", primitiveSource: "#FFFFFF", category: 'icon' },
+  // Text & Icon items
+  { name: "Ti-neutral-primary", variablePath: "text-icon/ti-neutral-primary", primitiveSource: "Neutral Scale/12", category: 'text' },
+  { name: "Ti-neutral-secondary", variablePath: "text-icon/ti-neutral-secondary", primitiveSource: "Neutral Scale/11", category: 'text' },
+  { name: "Ti-brand-primary", variablePath: "text-icon/ti-brand-primary", primitiveSource: "Accessibility/1", category: 'text' },
+  { name: "Ti-on-bg-brand-primary", variablePath: "text-icon/ti-on-bg-brand-primary", primitiveSource: "Brand Contrast/1", category: 'text' },
+  { name: "Ti-on-bg-brand-primary-subtle", variablePath: "text-icon/ti-on-bg-brand-primary-subtle", primitiveSource: "Brand Scale/11", category: 'text' },
+  { name: "Ti-on-bg-error", variablePath: "text-icon/ti-on-bg-error", primitiveSource: "Error Contrast/1", category: 'text' },
+  { name: "Ti-on-bg-error-subtle", variablePath: "text-icon/ti-on-bg-error-subtle", primitiveSource: "Error Scale/11", category: 'text' },
+  { name: "Ti-on-bg-success", variablePath: "text-icon/ti-on-bg-success", primitiveSource: "Success Contrast/1", category: 'text' },
+  { name: "Ti-on-bg-success-subtle", variablePath: "text-icon/ti-on-bg-success-subtle", primitiveSource: "Success Scale/11", category: 'text' },
+  { name: "Ti-on-surface-overlay", variablePath: "text-icon/ti-on-surface-overlay", primitiveSource: "#FFFFFF", category: 'text' },
   
   // Background items
   { name: "Bg-brand-primary", variablePath: "background/bg-brand-primary", primitiveSource: "Brand Scale/9", category: 'background' },
@@ -1960,8 +1920,8 @@ const DOCUMENTATION_ITEMS: DocumentationItem[] = [
   { name: "Bg-success-subtle-emphasized", variablePath: "background/bg-success-subtle-emphasized", primitiveSource: "Success Scale/4", category: 'background' },
   
   // Border items
-  { name: "Br-with-surface-neutral", variablePath: "border/br-with-surface-neutral", primitiveSource: "Neutral Scale/7", category: 'border' },
-  { name: "Br-with-surface-neutral-emphasized", variablePath: "border/br-with-surface-neutral-emphasized", primitiveSource: "Neutral Scale/8", category: 'border' },
+  { name: "Br-with-sf-neutral", variablePath: "border/br-with-sf-neutral", primitiveSource: "Neutral Scale/7", category: 'border' },
+  { name: "Br-with-sf-neutral-secondary", variablePath: "border/br-with-sf-neutral-secondary", primitiveSource: "Neutral Scale/8", category: 'border' },
   { name: "Br-with-bg-brand-primary", variablePath: "border/br-with-bg-brand-primary", primitiveSource: "Brand Scale/11", category: 'border' },
   { name: "Br-with-bg-brand-primary-subtle", variablePath: "border/br-with-bg-brand-primary-subtle", primitiveSource: "Brand Scale/8", category: 'border' },
   { name: "Br-with-bg-success", variablePath: "border/br-with-bg-success", primitiveSource: "Success Scale/11", category: 'border' },
@@ -1999,7 +1959,7 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
     frame.y = 800;
     
     // Apply surface color variable to frame background
-    await applyVariableWithFallback(frame, collection, "surface/sfc-neutral-primary", 'backgrounds');
+    await applyVariableWithFallback(frame, collection, "surface/sf-neutral-primary", 'backgrounds');
 
     // Create title container
 const titleContainer = figma.createFrame();
@@ -2014,7 +1974,7 @@ titleContainer.paddingBottom = 56;
 titleContainer.itemSpacing = 0;
 titleContainer.layoutAlign = "STRETCH";
     // Apply surface-neutral-secondary background
-await applyVariableWithFallback(titleContainer, collection, "surface/sfc-neutral-secondary", 'backgrounds');
+await applyVariableWithFallback(titleContainer, collection, "surface/sf-neutral-secondary", 'backgrounds');
 frame.appendChild(titleContainer);
 
     // Add title
@@ -2024,7 +1984,7 @@ frame.appendChild(titleContainer);
     title.fontName = { family: "Inter", style: "Bold" };
     title.textAutoResize = "HEIGHT";
     // Apply text color variable
-    await applyVariableWithFallback(title, collection, "text/txt-neutral-primary", 'text');
+    await applyVariableWithFallback(title, collection, "text-icon/ti-neutral-primary", 'text');
     titleContainer.appendChild(title);
 
     // Group items by category
@@ -2046,7 +2006,7 @@ frame.appendChild(titleContainer);
           sectionSeparator.layoutAlign = "STRETCH";
           sectionSeparator.resize(1093, 0); // Full width of the frame
           // Apply border color variable for the separator line
-          await applyVariableWithFallback(sectionSeparator, collection, "border/br-with-surface-neutral", 'backgrounds');
+          await applyVariableWithFallback(sectionSeparator, collection, "border/br-with-sf-neutral", 'backgrounds');
           frame.appendChild(sectionSeparator);
         }
       }
@@ -2094,7 +2054,7 @@ async function createCategorySection(category: string, items: DocumentationItem[
   heading.textAutoResize = "HEIGHT";
   heading.layoutAlign = "STRETCH";
   // Apply text color variable
-  await applyVariableWithFallback(heading, collection, "text/txt-neutral-secondary", 'text');
+  await applyVariableWithFallback(heading, collection, "text-icon/ti-neutral-secondary", 'text');
   
   headingContainer.appendChild(heading);
   section.appendChild(headingContainer);
@@ -2119,7 +2079,7 @@ async function createCategorySection(category: string, items: DocumentationItem[
   // const topSeparator = figma.createLine();
   // topSeparator.strokeWeight = 0.5;
   // topSeparator.layoutAlign = "STRETCH";
-          // await applyVariableWithFallback(topSeparator, collection, "border/br-with-surface-neutral-primary", 'backgrounds');
+          // await applyVariableWithFallback(topSeparator, collection, "border/br-with-sf-neutral-primary", 'backgrounds');
   // contentWrapper.appendChild(topSeparator);
 
   // Add items
@@ -2133,7 +2093,7 @@ async function createCategorySection(category: string, items: DocumentationItem[
       const separator = figma.createLine();
       separator.strokeWeight = 0.5;
       separator.layoutAlign = "STRETCH";
-              await applyVariableWithFallback(separator, collection, "border/br-with-surface-neutral", 'backgrounds');
+              await applyVariableWithFallback(separator, collection, "border/br-with-sf-neutral", 'backgrounds');
       contentWrapper.appendChild(separator);
     }
   }
@@ -2162,7 +2122,7 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   styleNameHeader.textAutoResize = "HEIGHT";
   styleNameHeader.resize(375, styleNameHeader.height);
   // Apply text color variable
-  await applyVariableWithFallback(styleNameHeader, collection, "text/txt-neutral-secondary", 'text');
+  await applyVariableWithFallback(styleNameHeader, collection, "text-icon/ti-neutral-secondary", 'text');
   headerRow.appendChild(styleNameHeader);
 
   // Primitive header
@@ -2173,7 +2133,7 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   primitiveHeader.textAutoResize = "HEIGHT";
   primitiveHeader.resize(225, primitiveHeader.height);
   // Apply text color variable
-  await applyVariableWithFallback(primitiveHeader, collection, "text/txt-neutral-secondary", 'text');
+  await applyVariableWithFallback(primitiveHeader, collection, "text-icon/ti-neutral-secondary", 'text');
   headerRow.appendChild(primitiveHeader);
 
   // Hex Value header
@@ -2184,7 +2144,7 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   hexValueHeader.textAutoResize = "HEIGHT";
   hexValueHeader.resize(225, hexValueHeader.height);
   // Apply text color variable
-  await applyVariableWithFallback(hexValueHeader, collection, "text/txt-neutral-secondary", 'text');
+  await applyVariableWithFallback(hexValueHeader, collection, "text-icon/ti-neutral-secondary", 'text');
   headerRow.appendChild(hexValueHeader);
 
   return headerRow;
@@ -2236,24 +2196,24 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
         await applyVariableWithFallback(swatch, collection, "background/bg-error", 'backgrounds');
       }
     } else {
-      await applyVariableWithFallback(swatch, collection, "surface/sfc-neutral-primary", 'backgrounds');
+      await applyVariableWithFallback(swatch, collection, "surface/sf-neutral-primary", 'backgrounds');
     }
   } else {
     swatch.strokeWeight = 0.5;
     // Apply border color variable
-    await applyVariableWithFallback(swatch, collection, "border/br-with-surface-neutral", 'backgrounds');
+    await applyVariableWithFallback(swatch, collection, "border/br-with-sf-neutral", 'backgrounds');
     // Apply variable color to swatch
     await applyVariableWithFallback(swatch, collection, item.variablePath, 'backgrounds');
   }
   
   // Style name
   const styleName = figma.createText();
-  styleName.characters = item.name;
+  styleName.characters = item.name.toLowerCase();
   styleName.fontSize = 14;
   styleName.fontName = { family: "Inter", style: "Regular" };
   styleName.textAutoResize = "WIDTH_AND_HEIGHT";
   // Apply text color variable
-  await applyVariableWithFallback(styleName, collection, "text/txt-neutral-primary", 'text');
+  await applyVariableWithFallback(styleName, collection, "text-icon/ti-neutral-primary", 'text');
   
   // Create auto-layout frame for swatch and style name
   const styleContainer = figma.createFrame();
@@ -2285,15 +2245,15 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   primitiveBadge.paddingBottom = 4;
   primitiveBadge.cornerRadius = 6;
   // Apply background color variable
-  await applyVariableWithFallback(primitiveBadge, collection, "surface/sfc-neutral-secondary", 'backgrounds');
+  await applyVariableWithFallback(primitiveBadge, collection, "surface/sf-neutral-secondary", 'backgrounds');
 
   const primitiveText = figma.createText();
-  primitiveText.characters = item.primitiveSource;
+  primitiveText.characters = item.primitiveSource.toLowerCase();
   primitiveText.fontSize = 12;
   primitiveText.fontName = { family: "Inter", style: "Regular" };
   primitiveText.textAutoResize = "HEIGHT";
   // Apply text color variable
-  await applyVariableWithFallback(primitiveText, collection, "text/txt-neutral-secondary", 'text');
+  await applyVariableWithFallback(primitiveText, collection, "text-icon/ti-neutral-secondary", 'text');
   primitiveBadge.appendChild(primitiveText);
 
   // Create parent frame for primitive badge
@@ -2350,7 +2310,7 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
       hexValueBadge.paddingBottom = 4;
       hexValueBadge.cornerRadius = 6;
       // Apply background color variable
-      await applyVariableWithFallback(hexValueBadge, collection, "surface/sfc-neutral-secondary", 'backgrounds');
+      await applyVariableWithFallback(hexValueBadge, collection, "surface/sf-neutral-secondary", 'backgrounds');
 
       const hexValueText = figma.createText();
       // Use the normalizeHex function to ensure 6 characters
@@ -2361,7 +2321,7 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
       hexValueText.textAutoResize = "HEIGHT";
       hexValueText.textAlignHorizontal = "CENTER";
       // Apply text color variable
-      await applyVariableWithFallback(hexValueText, collection, "text/txt-neutral-secondary", 'text');
+      await applyVariableWithFallback(hexValueText, collection, "text-icon/ti-neutral-secondary", 'text');
       hexValueBadge.appendChild(hexValueText);
       
       hexValueContainer.appendChild(hexValueBadge);
@@ -2379,7 +2339,7 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
     hexValueBadge.paddingBottom = 4;
     hexValueBadge.cornerRadius = 6;
           // Apply background color variable
-      await applyVariableWithFallback(hexValueBadge, collection, "surface/sfc-neutral-secondary", 'backgrounds');
+      await applyVariableWithFallback(hexValueBadge, collection, "surface/sf-neutral-secondary", 'backgrounds');
 
     const hexValueText = figma.createText();
     // Try to get hex value using the old method as fallback
@@ -2391,7 +2351,7 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
     hexValueText.fontName = { family: "Inter", style: "Regular" };
     hexValueText.textAutoResize = "HEIGHT";
           // Apply text color variable
-      await applyVariableWithFallback(hexValueText, collection, "text/txt-neutral-secondary", 'text');
+      await applyVariableWithFallback(hexValueText, collection, "text-icon/ti-neutral-secondary", 'text');
     hexValueBadge.appendChild(hexValueText);
     
     hexValueContainer.appendChild(hexValueBadge);
