@@ -1016,12 +1016,16 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
 
         // Create demo components if enabled
         if (exportDemo) {
+          console.log("Creating demo components...");
           await exportDemoComponents(primitiveCollection, semanticCollection);
+          console.log("Demo components created successfully");
         }
 
         // Create documentation if enabled
         if (shouldExportDocumentation) {
+          console.log("Creating documentation...");
           await exportDocumentation(primitiveCollection, semanticCollection);
+          console.log("Documentation created successfully");
         }
       } else {
         collection = figma.variables.createVariableCollection(`CCS ${versionNumber}`);
@@ -1050,12 +1054,16 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
 
         // Create demo components if enabled
         if (exportDemo) {
+          console.log("Creating demo components...");
           await exportDemoComponents(collection);
+          console.log("Demo components created successfully");
         }
 
         // Create documentation if enabled
         if (shouldExportDocumentation) {
+          console.log("Creating documentation...");
           await exportDocumentation(collection);
+          console.log("Documentation created successfully");
         }
       }
 
@@ -1582,6 +1590,7 @@ async function applyVariableWithFallback(
 
 // Main Entry Point
 async function exportDemoComponents(collection: VariableCollection, semanticCollection: VariableCollection | null = null) {
+  console.log("exportDemoComponents called with collection:", collection.name);
   try {
     // Load required fonts
     await Promise.all([
@@ -2346,6 +2355,7 @@ const DOCUMENTATION_ITEMS: DocumentationItem[] = [
 
 // Main documentation export function
 async function exportDocumentation(collection: VariableCollection, semanticCollection: VariableCollection | null = null) {
+  console.log("exportDocumentation called with collection:", collection.name);
   try {
     // Load required fonts
     await Promise.all([
