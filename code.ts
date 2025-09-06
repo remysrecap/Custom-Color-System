@@ -332,12 +332,7 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     const textStyle = figma.createTextStyle();
     textStyle.name = styleName;
     
-    // Set initial values (fallback) - don't set fontName when using variable binding
-    textStyle.fontSize = style.fontSize;
-    textStyle.lineHeight = { value: style.lineHeight, unit: "PIXELS" };
-    textStyle.letterSpacing = { value: style.letterSpacing, unit: "PIXELS" };
-    
-    // Bind variables using setBoundVariable method
+    // Bind variables using setBoundVariable method - no direct property assignments
     if (fontFamilyVar) {
       textStyle.setBoundVariable("fontFamily", fontFamilyVar);
       console.log(`Bound fontFamily to variable: ${fontFamilyVar.name}`);
