@@ -243,7 +243,7 @@ async function createFontVariableReference(
 // Function to create spacing collection
 async function createSpacingCollection(versionNumber: string): Promise<VariableCollection> {
   console.log(`Creating spacing collection with version: ${versionNumber}`);
-  const collection = figma.variables.createVariableCollection(`CCS Spacing ${versionNumber}`);
+  const collection = figma.variables.createVariableCollection(`SCS Spacing ${versionNumber}`);
   
   // Use single mode (no light/dark)
   const mode = collection.modes[0];
@@ -277,7 +277,7 @@ async function createTextStyles(versionNumber: string): Promise<void> {
   
   // Get the font system collection to bind variables
   const collections = await figma.variables.getLocalVariableCollectionsAsync();
-  const fontCollection = collections.find(c => c.name === `CCS Font System ${versionNumber}`);
+  const fontCollection = collections.find(c => c.name === `SCS Font ${versionNumber}`);
   
   if (!fontCollection) {
     console.log("Font collection not found, cannot bind variables to text styles");
@@ -318,7 +318,7 @@ async function createTextStyles(versionNumber: string): Promise<void> {
   
   // Create text styles with variable bindings
   for (const [scaleName, style] of Object.entries(TYPOGRAPHY_SCALE)) {
-    const styleName = `Typography/${scaleName}`;
+    const styleName = `SCS Font System/${scaleName}`;
     
     // Determine font style based on weight
     let currentFontStyle = "Regular";
@@ -416,7 +416,7 @@ async function createFontSystem(versionNumber: string): Promise<void> {
   console.log(`Creating font system with version: ${versionNumber}`);
   
   // Create font system collection with single mode
-  const fontCollection = figma.variables.createVariableCollection(`CCS Font System ${versionNumber}`);
+  const fontCollection = figma.variables.createVariableCollection(`SCS Font ${versionNumber}`);
   const mode = fontCollection.modes[0];
   fontCollection.renameMode(mode.modeId, "Default");
   
@@ -425,10 +425,10 @@ async function createFontSystem(versionNumber: string): Promise<void> {
   
   // Create typography scale variables that reference spacing tokens
   for (const [scaleName, style] of Object.entries(TYPOGRAPHY_SCALE)) {
-    const baseName = `Typography/${scaleName}`;
+    const baseName = `SCS Font System/${scaleName}`;
     
     // Font size - reference General spacing token
-    const fontSizeVarId = await findSpacingVariableByValue(`CCS Spacing ${versionNumber}`, "General", style.fontSize);
+    const fontSizeVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "General", style.fontSize);
     if (fontSizeVarId) {
       await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/font-size`, fontSizeVarId);
     } else {
@@ -436,7 +436,7 @@ async function createFontSystem(versionNumber: string): Promise<void> {
     }
     
     // Line height - reference General spacing token
-    const lineHeightVarId = await findSpacingVariableByValue(`CCS Spacing ${versionNumber}`, "General", style.lineHeight);
+    const lineHeightVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "General", style.lineHeight);
     if (lineHeightVarId) {
       await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/line-height`, lineHeightVarId);
     } else {
@@ -444,7 +444,7 @@ async function createFontSystem(versionNumber: string): Promise<void> {
     }
     
     // Letter spacing - reference Kerning token
-    const letterSpacingVarId = await findSpacingVariableByValue(`CCS Spacing ${versionNumber}`, "Kerning", style.letterSpacing);
+    const letterSpacingVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "Kerning", style.letterSpacing);
     if (letterSpacingVarId) {
       await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/letter-spacing`, letterSpacingVarId);
     } else {
@@ -452,7 +452,7 @@ async function createFontSystem(versionNumber: string): Promise<void> {
     }
     
     // Font weight - reference Weight token
-    const fontWeightVarId = await findSpacingVariableByValue(`CCS Spacing ${versionNumber}`, "Weight", style.fontWeight);
+    const fontWeightVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "Weight", style.fontWeight);
     if (fontWeightVarId) {
       await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/font-weight`, fontWeightVarId);
     } else {
@@ -987,8 +987,8 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
       let semanticCollection: VariableCollection | null = null;
 
       if (includePrimitives) {
-        primitiveCollection = figma.variables.createVariableCollection(`CCS Primitives ${versionNumber}`);
-        semanticCollection = figma.variables.createVariableCollection(`CCS Semantics ${versionNumber}`);
+        primitiveCollection = figma.variables.createVariableCollection(`SCS Primitive ${versionNumber}`);
+        semanticCollection = figma.variables.createVariableCollection(`SCS Semantic ${versionNumber}`);
 
         if (appearance === "light" || appearance === "both") {
           const lightMode = primitiveCollection.modes[0];
@@ -1028,7 +1028,7 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
           console.log("Documentation created successfully");
         }
       } else {
-        collection = figma.variables.createVariableCollection(`CCS ${versionNumber}`);
+        collection = figma.variables.createVariableCollection(`SCS Color ${versionNumber}`);
         
         if (appearance === "light" || appearance === "both") {
           const lightMode = collection.modes[0];
@@ -1600,7 +1600,7 @@ async function exportDemoComponents(collection: VariableCollection, semanticColl
     
     // Create main frame
     const frame = figma.createFrame();
-    frame.name = "CCS Demo Components";
+    frame.name = "SCS Demo Components";
     frame.layoutMode = "HORIZONTAL";
     frame.primaryAxisSizingMode = "FIXED"; // Set to FIXED
     frame.counterAxisSizingMode = "FIXED"; // Set to FIXED
@@ -2366,7 +2366,7 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
     
     // Create main frame
     const frame = figma.createFrame();
-    frame.name = "CCS Documentation";
+    frame.name = "SCS Documentation";
     frame.layoutMode = "VERTICAL";
     frame.primaryAxisSizingMode = "AUTO";
     frame.counterAxisSizingMode = "FIXED";
