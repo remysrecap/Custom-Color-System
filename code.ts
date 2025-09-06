@@ -344,44 +344,38 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     const letterSpacingVar = allVariables.find(v => v && v.name === `${styleName}/letter-spacing`);
     const fontWeightVar = allVariables.find(v => v && v.name === `${styleName}/font-weight`);
     
-    // Get the actual values from the typography variables (which reference spacing tokens)
-    let finalFontSize = style.fontSize;
-    let finalLineHeight = style.lineHeight;
-    let finalLetterSpacing = style.letterSpacing;
-    
-    if (fontSizeVar) {
-      const fontSizeValue = fontSizeVar.valuesByMode[fontCollection.modes[0].modeId];
-      if (typeof fontSizeValue === 'number') {
-        finalFontSize = fontSizeValue;
-        console.log(`Using fontSize from variable: ${fontSizeVar.name} = ${finalFontSize}`);
-      }
-    }
-    
-    if (lineHeightVar) {
-      const lineHeightValue = lineHeightVar.valuesByMode[fontCollection.modes[0].modeId];
-      if (typeof lineHeightValue === 'number') {
-        finalLineHeight = lineHeightValue;
-        console.log(`Using lineHeight from variable: ${lineHeightVar.name} = ${finalLineHeight}`);
-      }
-    }
-    
-    if (letterSpacingVar) {
-      const letterSpacingValue = letterSpacingVar.valuesByMode[fontCollection.modes[0].modeId];
-      if (typeof letterSpacingValue === 'number') {
-        finalLetterSpacing = letterSpacingValue;
-        console.log(`Using letterSpacing from variable: ${letterSpacingVar.name} = ${finalLetterSpacing}`);
-      }
-    }
-    
-    // Create the text style with values from variables
+    // Create the text style first
     const textStyle = figma.createTextStyle();
     textStyle.name = styleName;
     textStyle.fontName = { family: fontFamily, style: currentFontStyle };
-    textStyle.fontSize = finalFontSize;
-    textStyle.lineHeight = { value: finalLineHeight, unit: "PIXELS" };
-    textStyle.letterSpacing = { value: finalLetterSpacing, unit: "PIXELS" };
     
-    console.log(`Text style ${styleName} created with values from variables: fontSize=${finalFontSize}, lineHeight=${finalLineHeight}, letterSpacing=${finalLetterSpacing}`);
+    // Set initial values (fallback)
+    textStyle.fontSize = style.fontSize;
+    textStyle.lineHeight = { value: style.lineHeight, unit: "PIXELS" };
+    textStyle.letterSpacing = { value: style.letterSpacing, unit: "PIXELS" };
+    
+    // Bind variables using setBoundVariable method
+    if (fontSizeVar) {
+      textStyle.setBoundVariable("fontSize", fontSizeVar);
+      console.log(`Bound fontSize to variable: ${fontSizeVar.name}`);
+    }
+    
+    if (lineHeightVar) {
+      textStyle.setBoundVariable("lineHeight", lineHeightVar);
+      console.log(`Bound lineHeight to variable: ${lineHeightVar.name}`);
+    }
+    
+    if (letterSpacingVar) {
+      textStyle.setBoundVariable("letterSpacing", letterSpacingVar);
+      console.log(`Bound letterSpacing to variable: ${letterSpacingVar.name}`);
+    }
+    
+    if (fontWeightVar) {
+      textStyle.setBoundVariable("fontWeight", fontWeightVar);
+      console.log(`Bound fontWeight to variable: ${fontWeightVar.name}`);
+    }
+    
+    console.log(`Text style ${styleName} bound to variables successfully`);
     
     console.log(`Created text style: ${styleName} with ${fontFamily} ${currentFontStyle}`);
   }
