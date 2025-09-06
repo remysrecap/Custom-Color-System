@@ -348,13 +348,7 @@ async function createTextStyles(versionNumber: string): Promise<void> {
       currentFontStyle = "Medium";
     }
     
-    // Try to load the specific font style
-    try {
-      await figma.loadFontAsync({ family: fontFamily, style: currentFontStyle });
-    } catch (error) {
-      console.log(`${fontFamily} ${currentFontStyle} not available, using Regular`);
-      currentFontStyle = "Regular";
-    }
+    // Font styles are already loaded upfront, no need to load again
     
     // Find the typography variables for this scale
     const fontSizeVar = allVariables.find(v => v && v.name === `${styleName}/font-size`);
