@@ -305,33 +305,15 @@ async function createTextStyles(versionNumber: string): Promise<void> {
   
   console.log(`Using font family from variable: ${fontFamilyValue}`);
   
-  // Try to load the font family and all necessary styles
+  // Try to load the font family
   let fontFamily = fontFamilyValue;
-  const fontStyles = ["Regular", "Medium", "Semi Bold", "Bold"];
-  
   try {
-    // Load all font styles we might need
-    for (const style of fontStyles) {
-      try {
-        await figma.loadFontAsync({ family: fontFamily, style: style });
-        console.log(`Successfully loaded ${fontFamily} ${style}`);
-      } catch (error) {
-        console.log(`${fontFamily} ${style} not available`);
-      }
-    }
-    console.log(`Successfully loaded ${fontFamily} font family`);
+    await figma.loadFontAsync({ family: fontFamily, style: "Regular" });
+    console.log(`Successfully loaded ${fontFamily} font`);
   } catch (error) {
     console.log(`${fontFamily} not available, falling back to Inter`);
     fontFamily = "Inter";
-    // Load Inter font styles
-    for (const style of fontStyles) {
-      try {
-        await figma.loadFontAsync({ family: "Inter", style: style });
-        console.log(`Successfully loaded Inter ${style}`);
-      } catch (error) {
-        console.log(`Inter ${style} not available`);
-      }
-    }
+    await figma.loadFontAsync({ family: "Inter", style: "Regular" });
   }
   
   // Create text styles with variable bindings
@@ -348,7 +330,13 @@ async function createTextStyles(versionNumber: string): Promise<void> {
       currentFontStyle = "Medium";
     }
     
-    // Font styles are already loaded upfront, no need to load again
+    // Try to load the specific font style
+    try {
+      await figma.loadFontAsync({ family: fontFamily, style: currentFontStyle });
+    } catch (error) {
+      console.log(`${fontFamily} ${currentFontStyle} not available, using Regular`);
+      currentFontStyle = "Regular";
+    }
     
     // Find the typography variables for this scale
     const fontSizeVar = allVariables.find(v => v && v.name === `${styleName}/font-size`);
