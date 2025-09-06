@@ -330,7 +330,9 @@ async function findSpacingVariableByValue(collectionName: string, groupName: str
   
   if (!spacingCollection) return null;
   
-  const variables = spacingCollection.variableIds.map(id => figma.variables.getVariableById(id));
+  const variables = await Promise.all(
+    spacingCollection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
+  );
   
   for (const variable of variables) {
     if (variable && variable.name.startsWith(`${groupName}/`)) {
