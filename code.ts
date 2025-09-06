@@ -271,90 +271,24 @@ async function createSpacingCollection(versionNumber: string): Promise<VariableC
   return collection;
 }
 
-// Function to create Figma text styles that reference typography variables
+// Function to create Figma text styles that use typography values
 async function createTextStyles(versionNumber: string): Promise<void> {
-  console.log(`Creating Figma text styles with variable references`);
+  console.log(`Creating Figma text styles with typography values`);
   
-  // Load GT Standard font (fallback to Inter if not available)
+  // Use GT Standard font (fallback to Inter if not available)
   let fontFamily = "GT Standard";
   let fontStyle = "Regular";
   
   try {
     await figma.loadFontAsync({ family: "GT Standard", style: "Regular" });
+    console.log("Successfully loaded GT Standard font");
   } catch (error) {
     console.log("GT Standard not available, falling back to Inter");
     fontFamily = "Inter";
     await figma.loadFontAsync({ family: "Inter", style: "Regular" });
   }
   
-  // Get the font system collection to reference typography variables
-  const collections = await figma.variables.getLocalVariableCollectionsAsync();
-  const fontCollection = collections.find(c => c.name === `CCS Font System ${versionNumber}`);
-  
-  // Get the font family from the font family variable
-  if (fontCollection) {
-    const allFontVariables = await Promise.all(
-      fontCollection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
-    );
-    
-    const fontFamilyVar = allFontVariables.find(v => v && v.name === "Font Family/Primary");
-    
-    if (fontFamilyVar) {
-      const fontFamilyValue = fontFamilyVar.valuesByMode[fontCollection.modes[0].modeId];
-      if (typeof fontFamilyValue === 'string') {
-        fontFamily = fontFamilyValue;
-        console.log(`Using font family from variable: ${fontFamily}`);
-        
-        // Try to load the font family from the variable
-        try {
-          await figma.loadFontAsync({ family: fontFamily, style: "Regular" });
-        } catch (error) {
-          console.log(`${fontFamily} not available, falling back to Inter`);
-          fontFamily = "Inter";
-          await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-        }
-      }
-    }
-  }
-  
-  if (!fontCollection) {
-    console.log("Font collection not found, creating text styles with fallback values");
-    // Fallback to original behavior if collection not found
-    for (const [scaleName, style] of Object.entries(TYPOGRAPHY_SCALE)) {
-      const styleName = `Typography/${scaleName}`;
-      
-      // Determine font style based on weight
-      let currentFontStyle = fontStyle;
-      if (style.fontWeight >= 700) {
-        currentFontStyle = "Bold";
-      } else if (style.fontWeight >= 600) {
-        currentFontStyle = "Semi Bold";
-      } else if (style.fontWeight >= 500) {
-        currentFontStyle = "Medium";
-      }
-      
-      // Try to load the specific font style
-      try {
-        await figma.loadFontAsync({ family: fontFamily, style: currentFontStyle });
-      } catch (error) {
-        console.log(`${fontFamily} ${currentFontStyle} not available, using Regular`);
-        currentFontStyle = "Regular";
-      }
-      
-      // Create the text style with fallback values
-      const textStyle = figma.createTextStyle();
-      textStyle.name = styleName;
-      textStyle.fontName = { family: fontFamily, style: currentFontStyle };
-      textStyle.fontSize = style.fontSize;
-      textStyle.lineHeight = { value: style.lineHeight, unit: "PIXELS" };
-      textStyle.letterSpacing = { value: style.letterSpacing, unit: "PIXELS" };
-      
-      console.log(`Created text style with fallback values: ${styleName}`);
-    }
-    return;
-  }
-  
-  // Create text styles that reference typography variables
+  // Create text styles using the typography scale values
   for (const [scaleName, style] of Object.entries(TYPOGRAPHY_SCALE)) {
     const styleName = `Typography/${scaleName}`;
     
@@ -376,57 +310,18 @@ async function createTextStyles(versionNumber: string): Promise<void> {
       currentFontStyle = "Regular";
     }
     
-    // Find the typography variables for this scale
-    const allVariables = await Promise.all(
-      fontCollection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
-    );
-    
-    const fontSizeVar = allVariables.find(v => v && v.name === `${styleName}/font-size`);
-    const lineHeightVar = allVariables.find(v => v && v.name === `${styleName}/line-height`);
-    const letterSpacingVar = allVariables.find(v => v && v.name === `${styleName}/letter-spacing`);
-    
-    // Create the text style with variable references
+    // Create the text style with typography scale values
     const textStyle = figma.createTextStyle();
     textStyle.name = styleName;
     textStyle.fontName = { family: fontFamily, style: currentFontStyle };
+    textStyle.fontSize = style.fontSize;
+    textStyle.lineHeight = { value: style.lineHeight, unit: "PIXELS" };
+    textStyle.letterSpacing = { value: style.letterSpacing, unit: "PIXELS" };
     
-    // Get the actual values from the typography variables (which reference spacing tokens)
-    let finalFontSize = style.fontSize;
-    let finalLineHeight = style.lineHeight;
-    let finalLetterSpacing = style.letterSpacing;
-    
-    if (fontSizeVar) {
-      const fontSizeValue = fontSizeVar.valuesByMode[fontCollection.modes[0].modeId];
-      if (typeof fontSizeValue === 'number') {
-        finalFontSize = fontSizeValue;
-      }
-    }
-    
-    if (lineHeightVar) {
-      const lineHeightValue = lineHeightVar.valuesByMode[fontCollection.modes[0].modeId];
-      if (typeof lineHeightValue === 'number') {
-        finalLineHeight = lineHeightValue;
-      }
-    }
-    
-    if (letterSpacingVar) {
-      const letterSpacingValue = letterSpacingVar.valuesByMode[fontCollection.modes[0].modeId];
-      if (typeof letterSpacingValue === 'number') {
-        finalLetterSpacing = letterSpacingValue;
-      }
-    }
-    
-    // Apply the values to the text style
-    textStyle.fontSize = finalFontSize;
-    textStyle.lineHeight = { value: finalLineHeight, unit: "PIXELS" };
-    textStyle.letterSpacing = { value: finalLetterSpacing, unit: "PIXELS" };
-    
-    console.log(`Text style ${styleName} uses values: fontSize=${finalFontSize}, lineHeight=${finalLineHeight}, letterSpacing=${finalLetterSpacing}`);
-    
-    console.log(`Created text style with variable references: ${styleName}`);
+    console.log(`Created text style: ${styleName} with ${fontFamily} ${currentFontStyle}, fontSize=${style.fontSize}, lineHeight=${style.lineHeight}, letterSpacing=${style.letterSpacing}`);
   }
   
-  console.log(`Text styles created successfully with variable references`);
+  console.log(`Text styles created successfully`);
 }
 
 // Helper function to find spacing variable by value
@@ -501,10 +396,7 @@ async function createFontSystem(versionNumber: string): Promise<void> {
     }
   }
   
-  // Create Figma text styles
-  await createTextStyles(versionNumber);
-  
-  console.log(`Font system created successfully`);
+  console.log(`Font system variables created successfully`);
 }
 
 // Utility function to convert hex colors to RGB format for Figma
@@ -1054,6 +946,8 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
         if (includeFontSystem) {
           await createSpacingCollection(versionNumber);
           await createFontSystem(versionNumber);
+          // Create text styles after all variables are set up
+          await createTextStyles(versionNumber);
         }
 
         // Create demo components if enabled
@@ -1086,6 +980,8 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
         if (includeFontSystem) {
           await createSpacingCollection(versionNumber);
           await createFontSystem(versionNumber);
+          // Create text styles after all variables are set up
+          await createTextStyles(versionNumber);
         }
 
         // Create demo components if enabled
