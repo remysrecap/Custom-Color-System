@@ -271,9 +271,9 @@ async function createSpacingCollection(versionNumber: string): Promise<VariableC
   return collection;
 }
 
-// Function to create Figma text styles
-async function createTextStyles(): Promise<void> {
-  console.log(`Creating Figma text styles`);
+// Function to create Figma text styles that reference typography variables
+async function createTextStyles(versionNumber: string): Promise<void> {
+  console.log(`Creating Figma text styles with variable references`);
   
   // Load GT Standard font (fallback to Inter if not available)
   let fontFamily = "GT Standard";
@@ -287,7 +287,48 @@ async function createTextStyles(): Promise<void> {
     await figma.loadFontAsync({ family: "Inter", style: "Regular" });
   }
   
-  // Create text styles for each typography scale
+  // Get the font system collection to reference typography variables
+  const collections = await figma.variables.getLocalVariableCollectionsAsync();
+  const fontCollection = collections.find(c => c.name === `CCS Font System ${versionNumber}`);
+  
+  if (!fontCollection) {
+    console.log("Font collection not found, creating text styles with fallback values");
+    // Fallback to original behavior if collection not found
+    for (const [scaleName, style] of Object.entries(TYPOGRAPHY_SCALE)) {
+      const styleName = `Typography/${scaleName}`;
+      
+      // Determine font style based on weight
+      let currentFontStyle = fontStyle;
+      if (style.fontWeight >= 700) {
+        currentFontStyle = "Bold";
+      } else if (style.fontWeight >= 600) {
+        currentFontStyle = "Semi Bold";
+      } else if (style.fontWeight >= 500) {
+        currentFontStyle = "Medium";
+      }
+      
+      // Try to load the specific font style
+      try {
+        await figma.loadFontAsync({ family: fontFamily, style: currentFontStyle });
+      } catch (error) {
+        console.log(`${fontFamily} ${currentFontStyle} not available, using Regular`);
+        currentFontStyle = "Regular";
+      }
+      
+      // Create the text style with fallback values
+      const textStyle = figma.createTextStyle();
+      textStyle.name = styleName;
+      textStyle.fontName = { family: fontFamily, style: currentFontStyle };
+      textStyle.fontSize = style.fontSize;
+      textStyle.lineHeight = { value: style.lineHeight, unit: "PIXELS" };
+      textStyle.letterSpacing = { value: style.letterSpacing, unit: "PIXELS" };
+      
+      console.log(`Created text style with fallback values: ${styleName}`);
+    }
+    return;
+  }
+  
+  // Create text styles that reference typography variables
   for (const [scaleName, style] of Object.entries(TYPOGRAPHY_SCALE)) {
     const styleName = `Typography/${scaleName}`;
     
@@ -309,18 +350,52 @@ async function createTextStyles(): Promise<void> {
       currentFontStyle = "Regular";
     }
     
-    // Create the text style
+    // Find the typography variables for this scale
+    const allVariables = await Promise.all(
+      fontCollection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
+    );
+    
+    const fontSizeVar = allVariables.find(v => v && v.name === `${styleName}/font-size`);
+    const lineHeightVar = allVariables.find(v => v && v.name === `${styleName}/line-height`);
+    const letterSpacingVar = allVariables.find(v => v && v.name === `${styleName}/letter-spacing`);
+    
+    // Create the text style with variable references
     const textStyle = figma.createTextStyle();
     textStyle.name = styleName;
     textStyle.fontName = { family: fontFamily, style: currentFontStyle };
-    textStyle.fontSize = style.fontSize;
-    textStyle.lineHeight = { value: style.lineHeight, unit: "PIXELS" };
-    textStyle.letterSpacing = { value: style.letterSpacing, unit: "PIXELS" };
     
-    console.log(`Created text style: ${styleName}`);
+    // Use values from variables if available, otherwise fallback to original values
+    if (fontSizeVar) {
+      const fontSizeValue = fontSizeVar.valuesByMode[fontCollection.modes[0].modeId];
+      textStyle.fontSize = typeof fontSizeValue === 'number' ? fontSizeValue : style.fontSize;
+    } else {
+      textStyle.fontSize = style.fontSize;
+    }
+    
+    if (lineHeightVar) {
+      const lineHeightValue = lineHeightVar.valuesByMode[fontCollection.modes[0].modeId];
+      textStyle.lineHeight = { 
+        value: typeof lineHeightValue === 'number' ? lineHeightValue : style.lineHeight, 
+        unit: "PIXELS" 
+      };
+    } else {
+      textStyle.lineHeight = { value: style.lineHeight, unit: "PIXELS" };
+    }
+    
+    if (letterSpacingVar) {
+      const letterSpacingValue = letterSpacingVar.valuesByMode[fontCollection.modes[0].modeId];
+      textStyle.letterSpacing = { 
+        value: typeof letterSpacingValue === 'number' ? letterSpacingValue : style.letterSpacing, 
+        unit: "PIXELS" 
+      };
+    } else {
+      textStyle.letterSpacing = { value: style.letterSpacing, unit: "PIXELS" };
+    }
+    
+    console.log(`Created text style with variable references: ${styleName}`);
   }
   
-  console.log(`Text styles created successfully`);
+  console.log(`Text styles created successfully with variable references`);
 }
 
 // Helper function to find spacing variable by value
@@ -396,7 +471,7 @@ async function createFontSystem(versionNumber: string): Promise<void> {
   }
   
   // Create Figma text styles
-  await createTextStyles();
+  await createTextStyles(versionNumber);
   
   console.log(`Font system created successfully`);
 }
