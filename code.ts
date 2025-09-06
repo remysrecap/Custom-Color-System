@@ -344,44 +344,44 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     const letterSpacingVar = allVariables.find(v => v && v.name === `${styleName}/letter-spacing`);
     const fontWeightVar = allVariables.find(v => v && v.name === `${styleName}/font-weight`);
     
-    // Create the text style
-    const textStyle = figma.createTextStyle();
-    textStyle.name = styleName;
-    textStyle.fontName = { family: fontFamily, style: currentFontStyle };
-    
-    // Set initial values (fallback)
-    textStyle.fontSize = style.fontSize;
-    textStyle.lineHeight = { value: style.lineHeight, unit: "PIXELS" };
-    textStyle.letterSpacing = { value: style.letterSpacing, unit: "PIXELS" };
-    
-    // Bind variables using boundVariables
-    const boundVariables: any = {};
+    // Get the actual values from the typography variables (which reference spacing tokens)
+    let finalFontSize = style.fontSize;
+    let finalLineHeight = style.lineHeight;
+    let finalLetterSpacing = style.letterSpacing;
     
     if (fontSizeVar) {
-      boundVariables.fontSize = { id: fontSizeVar.id };
-      console.log(`Binding fontSize to variable: ${fontSizeVar.name}`);
+      const fontSizeValue = fontSizeVar.valuesByMode[fontCollection.modes[0].modeId];
+      if (typeof fontSizeValue === 'number') {
+        finalFontSize = fontSizeValue;
+        console.log(`Using fontSize from variable: ${fontSizeVar.name} = ${finalFontSize}`);
+      }
     }
     
     if (lineHeightVar) {
-      boundVariables.lineHeight = { id: lineHeightVar.id };
-      console.log(`Binding lineHeight to variable: ${lineHeightVar.name}`);
+      const lineHeightValue = lineHeightVar.valuesByMode[fontCollection.modes[0].modeId];
+      if (typeof lineHeightValue === 'number') {
+        finalLineHeight = lineHeightValue;
+        console.log(`Using lineHeight from variable: ${lineHeightVar.name} = ${finalLineHeight}`);
+      }
     }
     
     if (letterSpacingVar) {
-      boundVariables.letterSpacing = { id: letterSpacingVar.id };
-      console.log(`Binding letterSpacing to variable: ${letterSpacingVar.name}`);
+      const letterSpacingValue = letterSpacingVar.valuesByMode[fontCollection.modes[0].modeId];
+      if (typeof letterSpacingValue === 'number') {
+        finalLetterSpacing = letterSpacingValue;
+        console.log(`Using letterSpacing from variable: ${letterSpacingVar.name} = ${finalLetterSpacing}`);
+      }
     }
     
-    if (fontWeightVar) {
-      boundVariables.fontWeight = { id: fontWeightVar.id };
-      console.log(`Binding fontWeight to variable: ${fontWeightVar.name}`);
-    }
+    // Create the text style with values from variables
+    const textStyle = figma.createTextStyle();
+    textStyle.name = styleName;
+    textStyle.fontName = { family: fontFamily, style: currentFontStyle };
+    textStyle.fontSize = finalFontSize;
+    textStyle.lineHeight = { value: finalLineHeight, unit: "PIXELS" };
+    textStyle.letterSpacing = { value: finalLetterSpacing, unit: "PIXELS" };
     
-    // Apply the variable bindings
-    if (Object.keys(boundVariables).length > 0) {
-      textStyle.boundVariables = boundVariables;
-      console.log(`Text style ${styleName} bound to ${Object.keys(boundVariables).length} variables`);
-    }
+    console.log(`Text style ${styleName} created with values from variables: fontSize=${finalFontSize}, lineHeight=${finalLineHeight}, letterSpacing=${finalLetterSpacing}`);
     
     console.log(`Created text style: ${styleName} with ${fontFamily} ${currentFontStyle}`);
   }
