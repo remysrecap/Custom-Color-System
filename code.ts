@@ -98,8 +98,8 @@ const SPACING_TOKENS = {
   // General spacing: 2-96 with increments of 2→4→8
   general: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 56, 64, 72, 80, 88, 96],
   
-  // Kerning: -2.00 to 2.00 with 0.15 increments, then 0.25 near zero
-  kerning: [-2.00, -1.85, -1.70, -1.55, -1.40, -1.25, -1.10, -0.95, -0.80, -0.65, -0.50, -0.35, -0.25, -0.15, 0, 0.15, 0.25, 0.35, 0.50, 0.65, 0.80, 0.95, 1.10, 1.25, 1.40, 1.55, 1.70, 1.85, 2.00],
+  // Kerning: Fewer, more practical values
+  kerning: [-1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5],
   
   // Weight: 100-800 in 100 increments
   weight: [100, 200, 300, 400, 500, 600, 700, 800]
@@ -110,56 +110,56 @@ const TYPOGRAPHY_SCALE: TypographyScale = {
   hero: {
     fontSize: 32, // General/32
     lineHeight: 36, // General/36
-    letterSpacing: -1.5, // Kerning/-1.5 (closest to -1.55)
+    letterSpacing: -1.5, // Kerning/[15]
     fontWeight: 700, // Weight/700
     fontStyle: "M Bd"
   },
   header: {
     fontSize: 20, // General/20
     lineHeight: 24, // General/24
-    letterSpacing: -1, // Kerning/-1 (closest to -1.10)
+    letterSpacing: -1, // Kerning/[1]
     fontWeight: 600, // Weight/600
     fontStyle: "M Smbd"
   },
   section: {
     fontSize: 18, // General/18
-    lineHeight: 22, // General/22 (closest to 20)
-    letterSpacing: -1.25, // Kerning/-1.25
+    lineHeight: 20, // General/20 (closest available)
+    letterSpacing: -1.25, // Kerning/[125]
     fontWeight: 600, // Weight/600
     fontStyle: "M Smbd"
   },
   subtitle: {
     fontSize: 16, // General/16
     lineHeight: 20, // General/20
-    letterSpacing: -1, // Kerning/-1 (closest to -1.10)
+    letterSpacing: -1, // Kerning/[1]
     fontWeight: 600, // Weight/600
     fontStyle: "M Smbd"
   },
   bodyBtn: {
     fontSize: 14, // General/14
-    lineHeight: 22, // General/22 (closest to 20)
-    letterSpacing: -0.5, // Kerning/-0.5
+    lineHeight: 20, // General/20 (closest available)
+    letterSpacing: -0.5, // Kerning/[5]
     fontWeight: 600, // Weight/600
     fontStyle: "M Smbd"
   },
   bodyBtnSm: {
     fontSize: 12, // General/12
     lineHeight: 18, // General/18
-    letterSpacing: -0.5, // Kerning/-0.5
+    letterSpacing: -0.5, // Kerning/[5]
     fontWeight: 600, // Weight/600
     fontStyle: "M Smbd"
   },
   caption: {
-    fontSize: 11, // General/11 (closest to 10)
+    fontSize: 10, // General/10 (closest available)
     lineHeight: 16, // General/16
-    letterSpacing: -0.5, // Kerning/-0.5
+    letterSpacing: -0.5, // Kerning/[5]
     fontWeight: 600, // Weight/600
     fontStyle: "M Smbd"
   },
   badge: {
     fontSize: 10, // General/10
-    lineHeight: 13, // General/13 (closest to 12)
-    letterSpacing: -0.3, // Kerning/-0.3 (closest to -0.35)
+    lineHeight: 12, // General/12 (closest available)
+    letterSpacing: -0.25, // Kerning/[25]
     fontWeight: 600, // Weight/600
     fontStyle: "M Smbd"
   }
@@ -215,6 +215,31 @@ async function createStringVariable(
   return variable;
 }
 
+// Function to create variable references
+async function createFontVariableReference(
+  collection: VariableCollection,
+  modeId: string,
+  name: string,
+  referencedVariableId: string
+): Promise<Variable | null> {
+  console.log(`Creating variable reference: ${name} referencing: ${referencedVariableId}`);
+  const existingVariable = await findExistingVariable(collection, name);
+
+  if (existingVariable) {
+    const variable = await figma.variables.getVariableByIdAsync(existingVariable);
+    if (variable) {
+      await variable.setValueForMode(modeId, { type: "VARIABLE_ALIAS", id: referencedVariableId });
+      console.log(`Updated variable reference ${name}`);
+    }
+    return variable;
+  }
+
+  const variable = figma.variables.createVariable(name, collection, "FLOAT");
+  await variable.setValueForMode(modeId, { type: "VARIABLE_ALIAS", id: referencedVariableId });
+  console.log(`Created variable reference ${name}`);
+  return variable;
+}
+
 // Function to create spacing collection
 async function createSpacingCollection(versionNumber: string): Promise<VariableCollection> {
   console.log(`Creating spacing collection with version: ${versionNumber}`);
@@ -231,8 +256,8 @@ async function createSpacingCollection(versionNumber: string): Promise<VariableC
   
   // Create Kerning tokens
   for (const value of SPACING_TOKENS.kerning) {
-    // Convert negative values and decimals to valid variable names
-    const name = value < 0 ? `Kerning/neg${Math.abs(value).toString().replace('.', '')}` : 
+    // Convert negative values and decimals to valid variable names using brackets
+    const name = value < 0 ? `Kerning/[${Math.abs(value).toString().replace('.', '')}]` : 
                  `Kerning/${value.toString().replace('.', '')}`;
     await createFontVariable(collection, mode.modeId, name, value);
   }
@@ -298,6 +323,27 @@ async function createTextStyles(): Promise<void> {
   console.log(`Text styles created successfully`);
 }
 
+// Helper function to find spacing variable by value
+async function findSpacingVariableByValue(collectionName: string, groupName: string, value: number): Promise<string | null> {
+  const collections = figma.variables.getLocalVariableCollections();
+  const spacingCollection = collections.find(c => c.name === collectionName);
+  
+  if (!spacingCollection) return null;
+  
+  const variables = spacingCollection.variableIds.map(id => figma.variables.getVariableById(id));
+  
+  for (const variable of variables) {
+    if (variable && variable.name.startsWith(`${groupName}/`)) {
+      const modeValue = variable.valuesByMode[spacingCollection.modes[0].modeId];
+      if (typeof modeValue === 'number' && Math.abs(modeValue - value) < 0.01) {
+        return variable.id;
+      }
+    }
+  }
+  
+  return null;
+}
+
 // Font system creation function
 async function createFontSystem(versionNumber: string): Promise<void> {
   console.log(`Creating font system with version: ${versionNumber}`);
@@ -310,21 +356,41 @@ async function createFontSystem(versionNumber: string): Promise<void> {
   // Create font family variables as strings
   await createStringVariable(fontCollection, mode.modeId, "Font Family/Primary", "GT Standard");
   
-  // Create typography scale variables
+  // Create typography scale variables that reference spacing tokens
   for (const [scaleName, style] of Object.entries(TYPOGRAPHY_SCALE)) {
     const baseName = `Typography/${scaleName}`;
     
-    // Font size
-    await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-size`, style.fontSize);
+    // Font size - reference General spacing token
+    const fontSizeVarId = await findSpacingVariableByValue(`CCS Spacing ${versionNumber}`, "General", style.fontSize);
+    if (fontSizeVarId) {
+      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/font-size`, fontSizeVarId);
+    } else {
+      await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-size`, style.fontSize);
+    }
     
-    // Line height
-    await createFontVariable(fontCollection, mode.modeId, `${baseName}/line-height`, style.lineHeight);
+    // Line height - reference General spacing token
+    const lineHeightVarId = await findSpacingVariableByValue(`CCS Spacing ${versionNumber}`, "General", style.lineHeight);
+    if (lineHeightVarId) {
+      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/line-height`, lineHeightVarId);
+    } else {
+      await createFontVariable(fontCollection, mode.modeId, `${baseName}/line-height`, style.lineHeight);
+    }
     
-    // Letter spacing
-    await createFontVariable(fontCollection, mode.modeId, `${baseName}/letter-spacing`, style.letterSpacing);
+    // Letter spacing - reference Kerning token
+    const letterSpacingVarId = await findSpacingVariableByValue(`CCS Spacing ${versionNumber}`, "Kerning", style.letterSpacing);
+    if (letterSpacingVarId) {
+      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/letter-spacing`, letterSpacingVarId);
+    } else {
+      await createFontVariable(fontCollection, mode.modeId, `${baseName}/letter-spacing`, style.letterSpacing);
+    }
     
-    // Font weight
-    await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-weight`, style.fontWeight);
+    // Font weight - reference Weight token
+    const fontWeightVarId = await findSpacingVariableByValue(`CCS Spacing ${versionNumber}`, "Weight", style.fontWeight);
+    if (fontWeightVarId) {
+      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/font-weight`, fontWeightVarId);
+    } else {
+      await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-weight`, style.fontWeight);
+    }
   }
   
   // Create Figma text styles
@@ -878,8 +944,8 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
 
         // Create font system if enabled
         if (includeFontSystem) {
-          await createFontSystem(versionNumber);
           await createSpacingCollection(versionNumber);
+          await createFontSystem(versionNumber);
         }
 
         // Create demo components if enabled
@@ -910,8 +976,8 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
 
         // Create font system if enabled
         if (includeFontSystem) {
-          await createFontSystem(versionNumber);
           await createSpacingCollection(versionNumber);
+          await createFontSystem(versionNumber);
         }
 
         // Create demo components if enabled
