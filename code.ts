@@ -305,16 +305,8 @@ async function createTextStyles(versionNumber: string): Promise<void> {
   
   console.log(`Using font family from variable: ${fontFamilyValue}`);
   
-  // Try to load the font family
-  let fontFamily = fontFamilyValue;
-  try {
-    await figma.loadFontAsync({ family: fontFamily, style: "Regular" });
-    console.log(`Successfully loaded ${fontFamily} font`);
-  } catch (error) {
-    console.log(`${fontFamily} not available, falling back to Inter`);
-    fontFamily = "Inter";
-    await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-  }
+  // Use the font family from the variable (no need to load it since we're binding the variable)
+  const fontFamily = fontFamilyValue;
   
   // Create text styles with variable bindings
   for (const [scaleName, style] of Object.entries(TYPOGRAPHY_SCALE)) {
@@ -328,14 +320,6 @@ async function createTextStyles(versionNumber: string): Promise<void> {
       currentFontStyle = "Semi Bold";
     } else if (style.fontWeight >= 500) {
       currentFontStyle = "Medium";
-    }
-    
-    // Try to load the specific font style
-    try {
-      await figma.loadFontAsync({ family: fontFamily, style: currentFontStyle });
-    } catch (error) {
-      console.log(`${fontFamily} ${currentFontStyle} not available, using Regular`);
-      currentFontStyle = "Regular";
     }
     
     // Find the typography variables for this scale
