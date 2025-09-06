@@ -44,16 +44,17 @@ interface RadixTheme {
 
 // Interface for plugin message
 interface PluginMessage {
-  type: string;
-  hexColor: string;
-  neutral: string;
-  success: string;  
-  error: string;
-  appearance: "light" | "dark" | "both";
-  includePrimitives: boolean;
-  exportDemo: boolean;
-  exportDocumentation: boolean;
-  includeFontSystem: boolean;  // Add font system option
+  type: "generate-palette" | "test-gt-standard" | "discover-gt-standard" | "update-font-mode" | "bind-font-variables";
+  hexColor?: string;
+  neutral?: string;
+  success?: string;  
+  error?: string;
+  appearance?: "light" | "dark" | "both";
+  includePrimitives?: boolean;
+  exportDemo?: boolean;
+  exportDocumentation?: boolean;
+  includeFontSystem?: boolean;  // Add font system option
+  fontMode?: "inter" | "gtStandard" | "sfPro" | "sfRounded" | "apercuPro";  // Font mode selection
 }
 
 // ===============================================
@@ -69,14 +70,30 @@ interface FontSystemConfig {
 
 // Typography scale definition
 interface TypographyScale {
-  hero: TypographyStyle;
-  header: TypographyStyle;
-  section: TypographyStyle;
-  subtitle: TypographyStyle;
-  bodyBtn: TypographyStyle;
-  bodyBtnSm: TypographyStyle;
-  caption: TypographyStyle;
-  badge: TypographyStyle;
+  // Display fonts - Large titles with heavy weight
+  display56: TypographyStyle;
+  display52: TypographyStyle;
+  
+  // Headline fonts - Section titles with medium-heavy weight
+  headline34: TypographyStyle;
+  headline26: TypographyStyle;
+  headline22: TypographyStyle;
+  
+  // Body fonts - Regular text with normal weight
+  body18: TypographyStyle;
+  body16: TypographyStyle;
+  body14: TypographyStyle;
+  body12: TypographyStyle;
+  
+  // Label fonts - Same sizes as body but heavier weight for buttons/interactions
+  label18: TypographyStyle;
+  label16: TypographyStyle;
+  label14: TypographyStyle;
+  
+  // Overline fonts - All caps for badges and overlines
+  overline14: TypographyStyle;
+  overline12: TypographyStyle;
+  overline10: TypographyStyle;
 }
 
 // Individual typography style
@@ -88,18 +105,337 @@ interface TypographyStyle {
   fontStyle: string;
 }
 
-// Font family definitions
+// Font mode configuration
+interface FontMode {
+  family: string;
+  displayName: string;
+  fallback: string;
+}
+
+const FONT_MODES = {
+  inter: {
+    family: "Inter",
+    displayName: "Inter",
+    fallback: "Inter"
+  },
+  gtStandard: {
+    family: "GT Standard",
+    displayName: "GT Standard (M Standard)",
+    fallback: "Inter"
+  },
+  sfPro: {
+    family: "SF Pro",
+    displayName: "SF Pro",
+    fallback: "Inter"
+  },
+  sfRounded: {
+    family: "SF Pro Rounded",
+    displayName: "SF Pro Rounded",
+    fallback: "Inter"
+  },
+  apercuPro: {
+    family: "Apercu Pro Var",
+    displayName: "Apercu Pro Var",
+    fallback: "Inter"
+  }
+} as const;
+
+// Current font mode - can be changed to switch between fonts
+let currentFontMode: FontMode = FONT_MODES.inter;
+
+// Function to switch font mode
+function setFontMode(mode: keyof typeof FONT_MODES): void {
+  currentFontMode = FONT_MODES[mode];
+  console.log(`Font mode switched to: ${currentFontMode.displayName}`);
+}
+
+// Function to update existing text nodes to use the current font mode
+async function updateExistingTextNodes(): Promise<void> {
+  console.log(`Updating existing text nodes to use ${currentFontMode.displayName}`);
+  
+  // Get all text nodes on the current page
+  const textNodes = figma.currentPage.findAll(node => node.type === "TEXT") as TextNode[];
+  
+  if (textNodes.length === 0) {
+    console.log("No text nodes found on current page");
+    return;
+  }
+  
+  console.log(`Found ${textNodes.length} text nodes to update`);
+  
+  // Update each text node
+  for (const textNode of textNodes) {
+    try {
+      // Get the current font name
+      const currentFont = textNode.fontName;
+      
+      // Skip if fontName is a symbol (mixed fonts)
+      if (typeof currentFont === 'symbol') {
+        console.log("Skipping text node with mixed fonts");
+        continue;
+      }
+      
+      // Skip if already using the correct font family
+      if (currentFont.family === currentFontMode.family) {
+        continue;
+      }
+      
+      // Determine the appropriate style based on current font weight
+      let targetStyle = "Regular";
+      if (currentFont.style.toLowerCase().includes("bold") || textNode.fontWeight === 700) {
+        targetStyle = "Bold";
+      } else if (currentFont.style.toLowerCase().includes("semi") || textNode.fontWeight === 600) {
+        targetStyle = "Semi Bold";
+      } else if (currentFont.style.toLowerCase().includes("medium") || textNode.fontWeight === 500) {
+        targetStyle = "Medium";
+      } else if (currentFont.style.toLowerCase().includes("italic")) {
+        targetStyle = "Italic";
+      }
+      
+      // Load the new font with fallback
+      const newFont = await loadFontWithFallback(currentFontMode.family, targetStyle);
+      
+      // Update the text node
+      textNode.fontName = newFont;
+      
+      // Enable vertical trim for precise text layout
+      textNode.leadingTrim = 'CAP_HEIGHT';
+      
+      console.log(`Updated text node: ${currentFont.family} ${currentFont.style} → ${newFont.family} ${newFont.style}`);
+      
+    } catch (error) {
+      console.error(`Failed to update text node:`, error);
+    }
+  }
+  
+  console.log(`✅ Updated ${textNodes.length} text nodes to use ${currentFontMode.displayName}`);
+}
+
+// Function to bind existing text nodes to font family variables
+async function bindTextNodesToFontVariables(): Promise<void> {
+  console.log("Binding text nodes to font family variables...");
+  
+  // Get the font collection
+  const collections = await figma.variables.getLocalVariableCollectionsAsync();
+  const fontCollection = collections.find(c => c.name.startsWith("SCS Font"));
+  
+  if (!fontCollection) {
+    console.warn("⚠️ No SCS Font collection found");
+    return;
+  }
+  
+  // Get the font family variable
+  const allVariables = await Promise.all(
+    fontCollection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
+  );
+  
+  const fontFamilyVar = allVariables.find(v => v && v.name === "Font Family/Primary");
+  if (!fontFamilyVar) {
+    console.warn("⚠️ Font Family/Primary variable not found");
+    return;
+  }
+  
+  // Get all text nodes on the current page
+  const textNodes = figma.currentPage.findAll(node => node.type === "TEXT") as TextNode[];
+  
+  if (textNodes.length === 0) {
+    console.log("No text nodes found on current page");
+    return;
+  }
+  
+  console.log(`Found ${textNodes.length} text nodes to bind to variables`);
+  
+  // Bind each text node to the font family variable
+  for (const textNode of textNodes) {
+    try {
+      // Bind the fontFamily property to the variable
+      textNode.setBoundVariable("fontFamily", fontFamilyVar);
+      console.log(`✅ Bound text node to Font Family/Primary variable`);
+    } catch (error) {
+      console.error(`Failed to bind text node to variable:`, error);
+    }
+  }
+  
+  console.log(`✅ Bound ${textNodes.length} text nodes to font family variables`);
+}
+
+// GT Standard M style mapping
+const GT_STANDARD_M_STYLES: Record<string, string[]> = {
+  regular: ["M Standard Regular", "M Regular"],
+  medium: ["M Standard Medium", "M Medium"],
+  semibold: ["M Standard Semi Bold", "M Semi Bold", "M Semibold"],
+  bold: ["M Standard Bold", "M Bold"],
+  italic: ["M Standard Italic", "M Italic"],
+};
+
+// GT Standard style mapping for typography categories
+const GT_STANDARD_TYPOGRAPHY_MAPPING: Record<string, keyof typeof GT_STANDARD_M_STYLES> = {
+  // Display styles use M Bold
+  display56: "bold",
+  display52: "bold",
+  
+  // Headline styles use M Semibold
+  headline34: "semibold",
+  headline26: "semibold",
+  headline22: "semibold",
+  
+  // Body styles use M Regular
+  body18: "regular",
+  body16: "regular",
+  body14: "regular",
+  body12: "regular",
+  
+  // Label styles use M Semibold
+  label18: "semibold",
+  label16: "semibold",
+  label14: "semibold",
+  
+  // Overline styles: 14 and 12 use M Regular, 10 uses M Semibold
+  overline14: "regular",
+  overline12: "regular",
+  overline10: "semibold",
+};
+
+// Discover and log available GT Standard fonts
+async function discoverGTStandardFonts(): Promise<void> {
+  try {
+    const allFonts = await figma.listAvailableFontsAsync();
+    const gtStandardFonts = allFonts.filter(f => f.fontName.family === "GT Standard");
+    
+    console.log("Available GT Standard fonts:");
+    gtStandardFonts.forEach(font => {
+      console.log(`  ${font.fontName.family} - ${font.fontName.style}`);
+    });
+    
+    const mCuts = gtStandardFonts.filter(f => /^M\b/i.test(f.fontName.style));
+    console.log("M Standard cuts found:");
+    mCuts.forEach(font => {
+      console.log(`  ${font.fontName.family} - ${font.fontName.style}`);
+    });
+  } catch (error) {
+    console.error("Error discovering GT Standard fonts:", error);
+  }
+}
+
+// Pick GT Standard M style based on weight preference
+async function pickGTStandardMStyle(wanted: keyof typeof GT_STANDARD_M_STYLES = "regular"): Promise<{ family: string; style: string } | null> {
+  try {
+    const fonts = await figma.listAvailableFontsAsync();
+    const mCuts = fonts
+      .filter(f => f.fontName.family === "GT Standard")
+      .filter(f => /^M\b/i.test(f.fontName.style)); // only "M …" (skip Narrow/Wide)
+
+    const wantedPatterns = GT_STANDARD_M_STYLES[wanted].map(s => new RegExp(`^${s}$`, "i"));
+    const match = mCuts.find(f => wantedPatterns.some(rx => rx.test(f.fontName.style)));
+
+    if (!match) {
+      const available = mCuts.map(f => f.fontName.style).join(", ");
+      console.warn(`Couldn't find GT Standard M cut for "${wanted}". Available: ${available}`);
+      return null;
+    }
+
+    await figma.loadFontAsync(match.fontName);
+    return match.fontName;
+  } catch (error) {
+    console.error(`Error loading GT Standard M style "${wanted}":`, error);
+    return null;
+  }
+}
+
+// Function to test GT Standard font loading
+async function testGTStandardFont(): Promise<boolean> {
+  try {
+    const fontName = await pickGTStandardMStyle("regular");
+    return fontName !== null;
+  } catch (error) {
+    console.warn("⚠️ GT Standard font is not available:", error);
+    return false;
+  }
+}
+
+// Function to get current font family
+function getCurrentFontFamily(): string {
+  return currentFontMode.family;
+}
+
+// Function to safely load font with fallback
+async function loadFontWithFallback(fontFamily: string, style: string): Promise<{ family: string; style: string }> {
+  try {
+    // If using GT Standard, use the M style mapping
+    if (fontFamily === "GT Standard") {
+      // Map numeric/descriptive styles to GT Standard M styles
+      let gtStyle: keyof typeof GT_STANDARD_M_STYLES = "regular";
+      
+      if (style.toLowerCase().includes("bold") || style === "700") {
+        gtStyle = "bold";
+      } else if (style.toLowerCase().includes("semi") || style === "600") {
+        gtStyle = "semibold";
+      } else if (style.toLowerCase().includes("medium") || style === "500") {
+        gtStyle = "medium";
+      } else if (style.toLowerCase().includes("italic")) {
+        gtStyle = "italic";
+      }
+      
+      const gtFontName = await pickGTStandardMStyle(gtStyle);
+      if (gtFontName) {
+        console.log(`✅ Successfully loaded GT Standard M style: ${gtFontName.family} ${gtFontName.style}`);
+        return gtFontName;
+      } else {
+        throw new Error("GT Standard M style not found");
+      }
+    } else if (fontFamily === "SF Pro" || fontFamily === "SF Pro Rounded" || fontFamily === "Apercu Pro Var") {
+      // For SF Pro, SF Pro Rounded, and Apercu Pro, try to load with the exact style
+      // If that fails, try common variations
+      const styleVariations = [
+        style,
+        style.replace("Semi Bold", "Semibold"),
+        style.replace("Semibold", "Semi Bold"),
+        style.replace("Regular", "Normal"),
+        style.replace("Normal", "Regular")
+      ];
+      
+      for (const variation of styleVariations) {
+        try {
+          await figma.loadFontAsync({ family: fontFamily, style: variation });
+          console.log(`✅ Successfully loaded font: ${fontFamily} ${variation}`);
+          return { family: fontFamily, style: variation };
+        } catch (variationError) {
+          continue;
+        }
+      }
+      
+      // If all variations fail, throw the original error
+      throw new Error(`No suitable style found for ${fontFamily}`);
+    } else {
+      // For other fonts (like Inter), use the style as-is
+      await figma.loadFontAsync({ family: fontFamily, style: style });
+      console.log(`✅ Successfully loaded font: ${fontFamily} ${style}`);
+      return { family: fontFamily, style: style };
+    }
+  } catch (error) {
+    console.warn(`⚠️ Failed to load font ${fontFamily} ${style}, falling back to ${currentFontMode.fallback} ${style}`);
+    try {
+      await figma.loadFontAsync({ family: currentFontMode.fallback, style: style });
+      return { family: currentFontMode.fallback, style: style };
+    } catch (fallbackError) {
+      console.error(`❌ Failed to load fallback font ${currentFontMode.fallback} ${style}:`, fallbackError);
+      throw fallbackError;
+    }
+  }
+}
+
+// Font family definitions (legacy support)
 const FONT_FAMILIES = {
-  primary: "GT Standard"
+  primary: currentFontMode.family
 } as const;
 
 // Spacing token definitions
 const SPACING_TOKENS = {
-  // General spacing: 2-96 with increments of 2→4→8
-  general: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 56, 64, 72, 80, 88, 96],
+  // General spacing: 2-96 with systematic increments including font system values
+  general: [2, 4, 6, 8, 10, 12, 14, 16, 17, 18, 20, 22, 24, 25, 26, 28, 31, 32, 34, 36, 40, 41, 44, 48, 52, 56, 57, 62, 64, 72, 80, 88, 96],
   
-  // Kerning: Fewer, more practical values
-  kerning: [-1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5],
+  // Kerning: Comprehensive range including tighter font system letter spacing values and GT Standard values
+    kerning: [-2.5, -2.3, -2.2, -2.1, -1.7, -1.6, -1.5, -1.4, -1.3, -1.2, -1.1, -1.0, -0.9, -0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
   
   // Weight: 100-800 in 100 increments
   weight: [100, 200, 300, 400, 500, 600, 700, 800]
@@ -107,63 +443,689 @@ const SPACING_TOKENS = {
 
 // Typography scale definitions using spacing tokens
 const TYPOGRAPHY_SCALE: TypographyScale = {
-  hero: {
-    fontSize: 32, // General/32
-    lineHeight: 36, // General/36
-    letterSpacing: -1.5, // Kerning/[15]
+  // Display fonts - Large titles with heavy weight
+  display56: {
+    fontSize: 56, // General/56
+    lineHeight: 62, // General/62
+    letterSpacing: -1.7, // Kerning/[1-7] - Tighter for impact
+    fontWeight: 700, // Weight/700 - Bold for maximum impact
+    fontStyle: "Bold"
+  },
+  display52: {
+    fontSize: 52, // General/52
+    lineHeight: 57, // General/57
+    letterSpacing: -1.6, // Kerning/[1-6] - Tighter for impact
     fontWeight: 700, // Weight/700
-    fontStyle: "M Bd"
+    fontStyle: "Bold"
   },
-  header: {
-    fontSize: 20, // General/20
-    lineHeight: 24, // General/24
-    letterSpacing: -1, // Kerning/[1]
+  
+  // Headline fonts - Section titles with medium-heavy weight
+  headline34: {
+    fontSize: 34, // General/34
+    lineHeight: 41, // General/41
+    letterSpacing: -0.7, // Kerning/[0-7] - Tighter for hierarchy
+    fontWeight: 600, // Weight/600 - SemiBold for strong hierarchy
+    fontStyle: "Semi Bold"
+  },
+  headline26: {
+    fontSize: 26, // General/26
+    lineHeight: 31, // General/31
+    letterSpacing: -0.5, // Kerning/[0-5] - Tighter for hierarchy
     fontWeight: 600, // Weight/600
-    fontStyle: "M Smbd"
+    fontStyle: "Semi Bold"
   },
-  section: {
+  headline22: {
+    fontSize: 22, // General/22
+    lineHeight: 26, // General/26
+    letterSpacing: -0.4, // Kerning/[0-4] - Tighter for hierarchy
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  
+  // Body fonts - Regular text with normal weight
+  body18: {
     fontSize: 18, // General/18
-    lineHeight: 20, // General/20 (closest available)
-    letterSpacing: -1.25, // Kerning/[125]
-    fontWeight: 600, // Weight/600
-    fontStyle: "M Smbd"
+    lineHeight: 25, // General/25
+    letterSpacing: -0.2, // Kerning/[0-2] - Tighter for readability
+    fontWeight: 400, // Weight/400 - Regular for comfortable reading
+    fontStyle: "Regular"
   },
-  subtitle: {
+  body16: {
     fontSize: 16, // General/16
-    lineHeight: 20, // General/20
-    letterSpacing: -1, // Kerning/[1]
-    fontWeight: 600, // Weight/600
-    fontStyle: "M Smbd"
+    lineHeight: 22, // General/22
+    letterSpacing: -0.2, // Kerning/[0-2] - Tighter for readability
+    fontWeight: 400, // Weight/400
+    fontStyle: "Regular"
   },
-  bodyBtn: {
+  body14: {
     fontSize: 14, // General/14
-    lineHeight: 20, // General/20 (closest available)
-    letterSpacing: -0.5, // Kerning/[5]
-    fontWeight: 600, // Weight/600
-    fontStyle: "M Smbd"
+    lineHeight: 20, // General/20
+    letterSpacing: -0.1, // Kerning/[0-1] - Tighter for readability
+    fontWeight: 400, // Weight/400
+    fontStyle: "Regular"
   },
-  bodyBtnSm: {
+  body12: {
     fontSize: 12, // General/12
-    lineHeight: 18, // General/18
-    letterSpacing: -0.5, // Kerning/[5]
-    fontWeight: 600, // Weight/600
-    fontStyle: "M Smbd"
+    lineHeight: 16, // General/16 - Tighter line height
+    letterSpacing: -0.1, // Kerning/[0-1] - Tighter for readability
+    fontWeight: 400, // Weight/400
+    fontStyle: "Regular"
   },
-  caption: {
-    fontSize: 10, // General/10 (closest available)
-    lineHeight: 16, // General/16
-    letterSpacing: -0.5, // Kerning/[5]
-    fontWeight: 600, // Weight/600
-    fontStyle: "M Smbd"
+  
+  // Label fonts - Same sizes as body but heavier weight for buttons/interactions
+  label18: {
+    fontSize: 18, // General/18
+    lineHeight: 25, // General/25
+    letterSpacing: -0.2, // Kerning/[0-2] - Same as body18
+    fontWeight: 600, // Weight/600 - SemiBold for button emphasis
+    fontStyle: "Semi Bold"
   },
-  badge: {
+  label16: {
+    fontSize: 16, // General/16
+    lineHeight: 22, // General/22
+    letterSpacing: -0.2, // Kerning/[0-2] - Same as body16
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  label14: {
+    fontSize: 14, // General/14
+    lineHeight: 20, // General/20
+    letterSpacing: -0.1, // Kerning/[0-1] - Same as body14
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  
+  // Overline fonts - All caps for badges and overlines
+  overline14: {
+    fontSize: 14, // General/14
+    lineHeight: 17, // General/17
+    letterSpacing: -0.1, // Kerning/[0-1] - Tighter for caps
+    fontWeight: 500, // Weight/500 - Medium for badge emphasis
+    fontStyle: "Medium"
+  },
+  overline12: {
+    fontSize: 12, // General/12
+    lineHeight: 14, // General/14
+    letterSpacing: -0.1, // Kerning/[0-1] - Tighter for caps
+    fontWeight: 500, // Weight/500
+    fontStyle: "Medium"
+  },
+  overline10: {
     fontSize: 10, // General/10
-    lineHeight: 12, // General/12 (closest available)
-    letterSpacing: -0.25, // Kerning/[25]
-    fontWeight: 600, // Weight/600
-    fontStyle: "M Smbd"
+    lineHeight: 12, // General/12
+    letterSpacing: -0.1, // Kerning/[0-1] - Tighter for caps
+    fontWeight: 500, // Weight/500
+    fontStyle: "Medium"
   }
 };
+
+// GT Standard typography scale with tighter letter spacing and correct font styles
+const GT_STANDARD_TYPOGRAPHY_SCALE: TypographyScale = {
+  // Display fonts - M Bold with tighter letter spacing
+  display56: {
+    fontSize: 56, // General/56
+    lineHeight: 62, // General/62
+    letterSpacing: -2.5, // Kerning/[2-5] - Moderately tighter for GT Standard
+    fontWeight: 700, // Weight/700 - M Bold
+    fontStyle: "Bold"
+  },
+  display52: {
+    fontSize: 52, // General/52
+    lineHeight: 57, // General/57
+    letterSpacing: -2.3, // Kerning/[2-3] - Moderately tighter for GT Standard
+    fontWeight: 700, // Weight/700 - M Bold
+    fontStyle: "Bold"
+  },
+  
+  // Headline fonts - M Semibold with significantly tighter letter spacing
+  headline34: {
+    fontSize: 34, // General/34
+    lineHeight: 41, // General/41
+    letterSpacing: -1.4, // Kerning/[1-4] - Moderately tighter for GT Standard
+    fontWeight: 600, // Weight/600 - M Semibold
+    fontStyle: "Semi Bold"
+  },
+  headline26: {
+    fontSize: 26, // General/26
+    lineHeight: 31, // General/31
+    letterSpacing: -1.0, // Kerning/[1-0] - Moderately tighter for GT Standard
+    fontWeight: 600, // Weight/600 - M Semibold
+    fontStyle: "Semi Bold"
+  },
+  headline22: {
+    fontSize: 22, // General/22
+    lineHeight: 26, // General/26
+    letterSpacing: -0.9, // Kerning/[0-9] - Moderately tighter for GT Standard
+    fontWeight: 600, // Weight/600 - M Semibold
+    fontStyle: "Semi Bold"
+  },
+  
+  // Body fonts - M Regular with extremely tight letter spacing
+  body18: {
+    fontSize: 18, // General/18
+    lineHeight: 25, // General/25
+    letterSpacing: -0.8, // Kerning/[0-8] - Moderately tighter for GT Standard Regular
+    fontWeight: 400, // Weight/400 - M Regular
+    fontStyle: "Regular"
+  },
+  body16: {
+    fontSize: 16, // General/16
+    lineHeight: 22, // General/22
+    letterSpacing: -0.7, // Kerning/[0-7] - Moderately tighter for GT Standard Regular
+    fontWeight: 400, // Weight/400 - M Regular
+    fontStyle: "Regular"
+  },
+  body14: {
+    fontSize: 14, // General/14
+    lineHeight: 20, // General/20
+    letterSpacing: -0.6, // Kerning/[0-6] - Moderately tighter for GT Standard Regular
+    fontWeight: 400, // Weight/400 - M Regular
+    fontStyle: "Regular"
+  },
+  body12: {
+    fontSize: 12, // General/12
+    lineHeight: 16, // General/16 - Tighter line height
+    letterSpacing: -0.5, // Kerning/[0-5] - Moderately tighter for GT Standard Regular
+    fontWeight: 400, // Weight/400 - M Regular
+    fontStyle: "Regular"
+  },
+  
+  // Label fonts - M Semibold with tighter letter spacing
+  label18: {
+    fontSize: 18, // General/18
+    lineHeight: 25, // General/25
+    letterSpacing: -0.3, // Kerning/[0-3] - Moderately tighter for GT Standard
+    fontWeight: 600, // Weight/600 - M Semibold
+    fontStyle: "Semi Bold"
+  },
+  label16: {
+    fontSize: 16, // General/16
+    lineHeight: 22, // General/22
+    letterSpacing: -0.2, // Kerning/[0-2] - Moderately tighter for GT Standard
+    fontWeight: 600, // Weight/600 - M Semibold
+    fontStyle: "Semi Bold"
+  },
+  label14: {
+    fontSize: 14, // General/14
+    lineHeight: 20, // General/20
+    letterSpacing: -0.2, // Kerning/[0-2] - Moderately tighter for GT Standard
+    fontWeight: 600, // Weight/600 - M Semibold
+    fontStyle: "Semi Bold"
+  },
+  
+  // Overline fonts - M Medium for all overlines (all caps)
+  overline14: {
+    fontSize: 14, // General/14
+    lineHeight: 17, // General/17
+    letterSpacing: -0.6, // Kerning/[0-6] - Moderately tighter for GT Standard
+    fontWeight: 500, // Weight/500 - M Medium
+    fontStyle: "Medium"
+  },
+  overline12: {
+    fontSize: 12, // General/12
+    lineHeight: 14, // General/14
+    letterSpacing: -0.5, // Kerning/[0-5] - Moderately tighter for GT Standard
+    fontWeight: 500, // Weight/500 - M Medium
+    fontStyle: "Medium"
+  },
+  overline10: {
+    fontSize: 10, // General/10
+    lineHeight: 12, // General/12
+    letterSpacing: -0.2, // Kerning/[0-2] - Moderately tighter for GT Standard
+    fontWeight: 500, // Weight/500 - M Medium
+    fontStyle: "Medium"
+  }
+};
+
+// SF Pro typography scale - Modern system typography with subtle refinement
+const SF_PRO_TYPOGRAPHY_SCALE: TypographyScale = {
+  // Display fonts - Clean, technical impact (loosened a smidge)
+  display56: {
+    fontSize: 56, // General/56
+    lineHeight: 62, // General/62
+    letterSpacing: -0.8, // Kerning/[0-8] - Loosened a smidge for SF Pro
+    fontWeight: 700, // Weight/700 - Bold for impact
+    fontStyle: "Bold"
+  },
+  display52: {
+    fontSize: 52, // General/52
+    lineHeight: 57, // General/57
+    letterSpacing: -0.7, // Kerning/[0-7] - Loosened a smidge for SF Pro
+    fontWeight: 700, // Weight/700
+    fontStyle: "Bold"
+  },
+  
+  // Headline fonts - Clear hierarchy with minimal refinement
+  headline34: {
+    fontSize: 34, // General/34
+    lineHeight: 40, // General/40 - Slightly tighter than Inter
+    letterSpacing: -0.4, // Kerning/[0-4] - Minimal tightening for SF Pro
+    fontWeight: 600, // Weight/600 - SemiBold for hierarchy
+    fontStyle: "Semi Bold"
+  },
+  headline26: {
+    fontSize: 26, // General/26
+    lineHeight: 30, // General/30 - Slightly tighter than Inter
+    letterSpacing: -0.3, // Kerning/[0-3] - Minimal tightening for SF Pro
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  headline22: {
+    fontSize: 22, // General/22
+    lineHeight: 25, // General/25 - Slightly tighter than Inter
+    letterSpacing: -0.2, // Kerning/[0-2] - Minimal tightening for SF Pro
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  
+  // Body fonts - Optimal readability (tightened a smidge)
+  body18: {
+    fontSize: 18, // General/18
+    lineHeight: 24, // General/24 - Slightly tighter than Inter
+    letterSpacing: -0.2, // Kerning/[0-2] - Tightened a smidge for SF Pro
+    fontWeight: 400, // Weight/400 - Regular for readability
+    fontStyle: "Regular"
+  },
+  body16: {
+    fontSize: 16, // General/16
+    lineHeight: 21, // General/21 - Slightly tighter than Inter
+    letterSpacing: -0.2, // Kerning/[0-2] - Tightened a smidge for SF Pro
+    fontWeight: 400, // Weight/400
+    fontStyle: "Regular"
+  },
+  body14: {
+    fontSize: 14, // General/14
+    lineHeight: 19, // General/19 - Slightly tighter than Inter
+    letterSpacing: -0.1, // Kerning/[0-1] - Tightened a smidge for SF Pro
+    fontWeight: 400, // Weight/400
+    fontStyle: "Regular"
+  },
+  body12: {
+    fontSize: 12, // General/12
+    lineHeight: 15, // General/15 - Slightly tighter than Inter
+    letterSpacing: -0.1, // Kerning/[0-1] - Tightened a smidge for SF Pro
+    fontWeight: 400, // Weight/400
+    fontStyle: "Regular"
+  },
+  
+  // Label fonts - UI emphasis (tightened a smidge)
+  label18: {
+    fontSize: 18, // General/18
+    lineHeight: 24, // General/24 - Same as body18
+    letterSpacing: -0.2, // Kerning/[0-2] - Tightened a smidge for SF Pro
+    fontWeight: 600, // Weight/600 - SemiBold for UI emphasis
+    fontStyle: "Semi Bold"
+  },
+  label16: {
+    fontSize: 16, // General/16
+    lineHeight: 21, // General/21 - Same as body16
+    letterSpacing: -0.2, // Kerning/[0-2] - Tightened a smidge for SF Pro
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  label14: {
+    fontSize: 14, // General/14
+    lineHeight: 19, // General/19 - Same as body14
+    letterSpacing: -0.1, // Kerning/[0-1] - Tightened a smidge for SF Pro
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  
+  // Overline fonts - Tightened a smidge, all caps
+  overline14: {
+    fontSize: 14, // General/14
+    lineHeight: 16, // General/16 - Tighter for overlines
+    letterSpacing: -0.1, // Kerning/[0-1] - Tightened a smidge for SF Pro
+    fontWeight: 500, // Weight/500 - Medium for emphasis
+    fontStyle: "Medium"
+  },
+  overline12: {
+    fontSize: 12, // General/12
+    lineHeight: 14, // General/14 - Tighter for overlines
+    letterSpacing: -0.1, // Kerning/[0-1] - Tightened a smidge for SF Pro
+    fontWeight: 500, // Weight/500
+    fontStyle: "Medium"
+  },
+  overline10: {
+    fontSize: 10, // General/10
+    lineHeight: 12, // General/12 - Tighter for overlines
+    letterSpacing: -0.1, // Kerning/[0-1] - Tightened a smidge for SF Pro
+    fontWeight: 500, // Weight/500
+    fontStyle: "Medium"
+  }
+};
+
+// SF Pro Rounded typography scale - Friendly, approachable typography
+const SF_ROUNDED_TYPOGRAPHY_SCALE: TypographyScale = {
+  // Display fonts - Friendly impact with breathing room
+  display56: {
+    fontSize: 56, // General/56
+    lineHeight: 64, // General/64 - More generous for rounded forms
+    letterSpacing: -0.5, // Kerning/[0-5] - Very minimal tightening for rounded
+    fontWeight: 700, // Weight/700 - Bold for impact
+    fontStyle: "Bold"
+  },
+  display52: {
+    fontSize: 52, // General/52
+    lineHeight: 59, // General/59 - More generous for rounded forms
+    letterSpacing: -0.4, // Kerning/[0-4] - Very minimal tightening for rounded
+    fontWeight: 700, // Weight/700
+    fontStyle: "Bold"
+  },
+  
+  // Headline fonts - Approachable hierarchy
+  headline34: {
+    fontSize: 34, // General/34
+    lineHeight: 42, // General/42 - More generous for rounded forms
+    letterSpacing: -0.2, // Kerning/[0-2] - Very minimal tightening for rounded
+    fontWeight: 600, // Weight/600 - SemiBold for hierarchy
+    fontStyle: "Semi Bold"
+  },
+  headline26: {
+    fontSize: 26, // General/26
+    lineHeight: 32, // General/32 - More generous for rounded forms
+    letterSpacing: -0.1, // Kerning/[0-1] - Very minimal tightening for rounded
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  headline22: {
+    fontSize: 22, // General/22
+    lineHeight: 27, // General/27 - More generous for rounded forms
+    letterSpacing: 0, // Kerning/0 - No tightening for rounded headlines
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  
+  // Body fonts - Comfortable readability
+  body18: {
+    fontSize: 18, // General/18
+    lineHeight: 26, // General/26 - More generous for rounded forms
+    letterSpacing: 0, // Kerning/0 - No tightening for rounded body text
+    fontWeight: 400, // Weight/400 - Regular for comfort
+    fontStyle: "Regular"
+  },
+  body16: {
+    fontSize: 16, // General/16
+    lineHeight: 23, // General/23 - More generous for rounded forms
+    letterSpacing: 0, // Kerning/0 - No tightening for rounded body text
+    fontWeight: 400, // Weight/400
+    fontStyle: "Regular"
+  },
+  body14: {
+    fontSize: 14, // General/14
+    lineHeight: 21, // General/21 - More generous for rounded forms
+    letterSpacing: 0, // Kerning/0 - No tightening for rounded body text
+    fontWeight: 400, // Weight/400
+    fontStyle: "Regular"
+  },
+  body12: {
+    fontSize: 12, // General/12
+    lineHeight: 17, // General/17 - More generous for rounded forms
+    letterSpacing: 0, // Kerning/0 - No tightening for rounded body text
+    fontWeight: 400, // Weight/400
+    fontStyle: "Regular"
+  },
+  
+  // Label fonts - Friendly UI emphasis
+  label18: {
+    fontSize: 18, // General/18
+    lineHeight: 26, // General/26 - Same as body18
+    letterSpacing: 0, // Kerning/0 - No tightening for rounded labels
+    fontWeight: 600, // Weight/600 - SemiBold for UI emphasis
+    fontStyle: "Semi Bold"
+  },
+  label16: {
+    fontSize: 16, // General/16
+    lineHeight: 23, // General/23 - Same as body16
+    letterSpacing: 0, // Kerning/0 - No tightening for rounded labels
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  label14: {
+    fontSize: 14, // General/14
+    lineHeight: 21, // General/21 - Same as body14
+    letterSpacing: 0, // Kerning/0 - No tightening for rounded labels
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  
+  // Overline fonts - Friendly emphasis (all caps)
+  overline14: {
+    fontSize: 14, // General/14
+    lineHeight: 18, // General/18 - More generous for rounded forms
+    letterSpacing: 0, // Kerning/0 - No tightening for rounded overlines
+    fontWeight: 500, // Weight/500 - Medium for emphasis
+    fontStyle: "Medium"
+  },
+  overline12: {
+    fontSize: 12, // General/12
+    lineHeight: 15, // General/15 - More generous for rounded forms
+    letterSpacing: 0, // Kerning/0 - No tightening for rounded overlines
+    fontWeight: 500, // Weight/500
+    fontStyle: "Medium"
+  },
+  overline10: {
+    fontSize: 10, // General/10
+    lineHeight: 13, // General/13 - More generous for rounded forms
+    letterSpacing: 0, // Kerning/0 - No tightening for rounded overlines
+    fontWeight: 500, // Weight/500
+    fontStyle: "Medium"
+  }
+};
+
+// Apercu Pro typography scale - Sophisticated editorial typography
+const APERCU_PRO_TYPOGRAPHY_SCALE: TypographyScale = {
+  // Display fonts - Editorial sophistication (tightened medium amount)
+  display56: {
+    fontSize: 56, // General/56
+    lineHeight: 60, // General/60 - Tighter for editorial feel
+    letterSpacing: -1.7, // Kerning/[1-7] - Tightened medium amount for Apercu
+    fontWeight: 700, // Weight/700 - Bold for impact
+    fontStyle: "Bold"
+  },
+  display52: {
+    fontSize: 52, // General/52
+    lineHeight: 55, // General/55 - Tighter for editorial feel
+    letterSpacing: -1.5, // Kerning/[1-5] - Tightened medium amount for Apercu
+    fontWeight: 700, // Weight/700
+    fontStyle: "Bold"
+  },
+  
+  // Headline fonts - Editorial hierarchy (tightened medium amount)
+  headline34: {
+    fontSize: 34, // General/34
+    lineHeight: 38, // General/38 - Tighter for editorial feel
+    letterSpacing: -1.0, // Kerning/[1-0] - Tightened medium amount for Apercu
+    fontWeight: 600, // Weight/600 - SemiBold for hierarchy
+    fontStyle: "Semi Bold"
+  },
+  headline26: {
+    fontSize: 26, // General/26
+    lineHeight: 29, // General/29 - Tighter for editorial feel
+    letterSpacing: -0.8, // Kerning/[0-8] - Tightened medium amount for Apercu
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  headline22: {
+    fontSize: 22, // General/22
+    lineHeight: 24, // General/24 - Tighter for editorial feel
+    letterSpacing: -0.7, // Kerning/[0-7] - Tightened medium amount for Apercu
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  
+  // Body fonts - Editorial refinement (loosened a bit)
+  body18: {
+    fontSize: 18, // General/18
+    lineHeight: 23, // General/23 - Tighter for editorial feel
+    letterSpacing: -0.1, // Kerning/[0-1] - Loosened a bit for Apercu
+    fontWeight: 400, // Weight/400 - Regular for readability
+    fontStyle: "Regular"
+  },
+  body16: {
+    fontSize: 16, // General/16
+    lineHeight: 20, // General/20 - Tighter for editorial feel
+    letterSpacing: -0.1, // Kerning/[0-1] - Loosened a bit for Apercu
+    fontWeight: 400, // Weight/400
+    fontStyle: "Regular"
+  },
+  body14: {
+    fontSize: 14, // General/14
+    lineHeight: 18, // General/18 - Tighter for editorial feel
+    letterSpacing: 0, // Kerning/0 - Loosened a bit for Apercu
+    fontWeight: 400, // Weight/400
+    fontStyle: "Regular"
+  },
+  body12: {
+    fontSize: 12, // General/12
+    lineHeight: 15, // General/15 - Tighter for editorial feel
+    letterSpacing: 0, // Kerning/0 - Loosened a bit for Apercu
+    fontWeight: 400, // Weight/400
+    fontStyle: "Regular"
+  },
+  
+  // Label fonts - Editorial UI emphasis (loosened a bit)
+  label18: {
+    fontSize: 18, // General/18
+    lineHeight: 23, // General/23 - Same as body18
+    letterSpacing: -0.1, // Kerning/[0-1] - Loosened a bit for Apercu
+    fontWeight: 600, // Weight/600 - SemiBold for UI emphasis
+    fontStyle: "Semi Bold"
+  },
+  label16: {
+    fontSize: 16, // General/16
+    lineHeight: 20, // General/20 - Same as body16
+    letterSpacing: -0.1, // Kerning/[0-1] - Loosened a bit for Apercu
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  label14: {
+    fontSize: 14, // General/14
+    lineHeight: 18, // General/18 - Same as body14
+    letterSpacing: 0, // Kerning/0 - Loosened a bit for Apercu
+    fontWeight: 600, // Weight/600
+    fontStyle: "Semi Bold"
+  },
+  
+  // Overline fonts - Editorial emphasis (loosened a bit, all caps)
+  overline14: {
+    fontSize: 14, // General/14
+    lineHeight: 16, // General/16 - Tighter for editorial feel
+    letterSpacing: 0, // Kerning/0 - Loosened a bit for Apercu
+    fontWeight: 500, // Weight/500 - Medium for emphasis
+    fontStyle: "Medium"
+  },
+  overline12: {
+    fontSize: 12, // General/12
+    lineHeight: 14, // General/14 - Tighter for editorial feel
+    letterSpacing: 0, // Kerning/0 - Loosened a bit for Apercu
+    fontWeight: 500, // Weight/500
+    fontStyle: "Medium"
+  },
+  overline10: {
+    fontSize: 10, // General/10
+    lineHeight: 12, // General/12 - Tighter for editorial feel
+    letterSpacing: 0, // Kerning/0 - Loosened a bit for Apercu
+    fontWeight: 500, // Weight/500
+    fontStyle: "Medium"
+  }
+};
+
+// Helper function to apply text styles from the font system
+async function applyTextStyle(textNode: TextNode, styleName: string): Promise<void> {
+  try {
+    // Find the text style by name
+    const textStyles = await figma.getLocalTextStylesAsync();
+    const fullStyleName = `SCS Font System/${styleName}`;
+    const textStyle = textStyles.find(style => style.name === fullStyleName);
+    
+    console.log(`Looking for text style: ${fullStyleName}`);
+    console.log(`Available text styles:`, textStyles.map(s => s.name));
+    
+    if (textStyle) {
+      // Load the font family and style needed for the text style
+      try {
+        await figma.loadFontAsync(textStyle.fontName);
+        
+        // Apply the text style to the entire node using the proper API
+        await textNode.setTextStyleIdAsync(textStyle.id);
+        console.log(`✅ Applied text style: ${styleName} to text node`);
+      } catch (fontError) {
+        console.warn(`Failed to load font for text style ${styleName}, applying fallback:`, fontError);
+        await applyFallbackTextStyle(textNode, styleName);
+      }
+    } else {
+      console.warn(`⚠️ Text style not found: ${fullStyleName}, applying fallback styles`);
+      // Apply fallback styles based on the style name
+      await applyFallbackTextStyle(textNode, styleName);
+    }
+  } catch (error) {
+    console.error(`❌ Error applying text style ${styleName}:`, error);
+    // Apply fallback styles on error
+    await applyFallbackTextStyle(textNode, styleName);
+  }
+}
+
+// Helper function to apply fallback text styles when text styles don't exist
+async function applyFallbackTextStyle(textNode: TextNode, styleName: string): Promise<void> {
+  try {
+    // Get the appropriate typography scale based on current font mode
+    let currentScale: TypographyScale;
+    switch (currentFontMode.family) {
+      case "GT Standard":
+        currentScale = GT_STANDARD_TYPOGRAPHY_SCALE;
+        break;
+      case "SF Pro":
+        currentScale = SF_PRO_TYPOGRAPHY_SCALE;
+        break;
+      case "SF Pro Rounded":
+        currentScale = SF_ROUNDED_TYPOGRAPHY_SCALE;
+        break;
+      case "Apercu Pro Var":
+        currentScale = APERCU_PRO_TYPOGRAPHY_SCALE;
+        break;
+      default:
+        currentScale = TYPOGRAPHY_SCALE; // Inter
+        break;
+    }
+    const typographyStyle = currentScale[styleName as keyof TypographyScale];
+    
+    if (typographyStyle) {
+      // Determine font style based on weight
+      let fontStyle = "Regular";
+      if (typographyStyle.fontWeight >= 700) {
+        fontStyle = "Bold";
+      } else if (typographyStyle.fontWeight >= 600) {
+        fontStyle = "Semi Bold";
+      } else if (typographyStyle.fontWeight >= 500) {
+        fontStyle = "Medium";
+      }
+      
+      // Load the current font with fallback
+      const loadedFont = await loadFontWithFallback(getCurrentFontFamily(), fontStyle);
+      
+      // Apply font properties directly
+      textNode.fontSize = typographyStyle.fontSize;
+      textNode.lineHeight = { value: typographyStyle.lineHeight, unit: "PIXELS" };
+      textNode.letterSpacing = { value: typographyStyle.letterSpacing, unit: "PIXELS" };
+      textNode.fontName = { family: loadedFont.family, style: loadedFont.style };
+      
+      // Set text to uppercase for overline styles
+      if (styleName.startsWith('overline')) {
+        textNode.textCase = 'UPPER';
+      }
+      
+      // Enable vertical trim for precise text layout
+      textNode.leadingTrim = 'CAP_HEIGHT';
+      
+      console.log(`Applied fallback styles for ${styleName}: ${typographyStyle.fontSize}px, ${loadedFont.family} ${fontStyle}`);
+    } else {
+      console.error(`Typography style not found for: ${styleName}`);
+    }
+  } catch (error) {
+    console.error(`Error applying fallback text style ${styleName}:`, error);
+  }
+}
 
 // Font system utility functions
 async function createFontVariable(
@@ -256,9 +1218,9 @@ async function createSpacingCollection(versionNumber: string): Promise<VariableC
   
   // Create Kerning tokens
   for (const value of SPACING_TOKENS.kerning) {
-    // Convert negative values and decimals to valid variable names using brackets
-    const name = value < 0 ? `Kerning/[${Math.abs(value).toString().replace('.', '')}]` : 
-                 `Kerning/${value.toString().replace('.', '')}`;
+    // Convert negative values and decimals to valid variable names using brackets and dashes
+    const name = value < 0 ? `Kerning/[${Math.abs(value).toString().replace('.', '-')}]` : 
+                 `Kerning/${value.toString().replace('.', '-')}`;
     await createFontVariable(collection, mode.modeId, name, value);
   }
   
@@ -289,35 +1251,41 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     fontCollection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
   );
   
-  // Find the font family variable
-  const fontFamilyVar = allVariables.find(v => v && v.name === "Font Family/Primary");
-  if (!fontFamilyVar) {
-    console.log("Font family variable not found");
-    return;
-  }
-  
-  // Get the font family value from the variable
-  const fontFamilyValue = fontFamilyVar.valuesByMode[fontCollection.modes[0].modeId];
-  if (typeof fontFamilyValue !== 'string') {
-    console.log("Font family variable does not contain a string value");
-    return;
-  }
-  
-  console.log(`Using font family from variable: ${fontFamilyValue}`);
+  // Use the current font mode
+  const fontFamily = getCurrentFontFamily();
+  console.log(`Using current font family: ${fontFamily}`);
   
   // Try to load the font family
-  let fontFamily = fontFamilyValue;
   try {
     await figma.loadFontAsync({ family: fontFamily, style: "Regular" });
     console.log(`Successfully loaded ${fontFamily} font`);
   } catch (error) {
     console.log(`${fontFamily} not available, falling back to Inter`);
-    fontFamily = "Inter";
     await figma.loadFontAsync({ family: "Inter", style: "Regular" });
   }
   
+  // Get the appropriate typography scale based on current font mode
+  let currentScale: TypographyScale;
+  switch (currentFontMode.family) {
+    case "GT Standard":
+      currentScale = GT_STANDARD_TYPOGRAPHY_SCALE;
+      break;
+    case "SF Pro":
+      currentScale = SF_PRO_TYPOGRAPHY_SCALE;
+      break;
+    case "SF Pro Rounded":
+      currentScale = SF_ROUNDED_TYPOGRAPHY_SCALE;
+      break;
+    case "Apercu Pro Var":
+      currentScale = APERCU_PRO_TYPOGRAPHY_SCALE;
+      break;
+    default:
+      currentScale = TYPOGRAPHY_SCALE; // Inter
+      break;
+  }
+  
   // Create text styles with variable bindings
-  for (const [scaleName, style] of Object.entries(TYPOGRAPHY_SCALE)) {
+  for (const [scaleName, style] of Object.entries(currentScale)) {
     const styleName = `SCS Font System/${scaleName}`;
     
     // Determine font style based on weight
@@ -354,7 +1322,16 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     textStyle.lineHeight = { value: style.lineHeight, unit: "PIXELS" };
     textStyle.letterSpacing = { value: style.letterSpacing, unit: "PIXELS" };
     
-    // Bind variables using setBoundVariable method
+    // Enable vertical trim for precise text layout
+    textStyle.leadingTrim = 'CAP_HEIGHT';
+    
+    // Set text to uppercase for overline styles
+    if (scaleName.startsWith('overline')) {
+      textStyle.textCase = 'UPPER';
+    }
+    
+    // Find the font family variable
+    const fontFamilyVar = allVariables.find(v => v && v.name === "Font Family/Primary");
     if (fontFamilyVar) {
       textStyle.setBoundVariable("fontFamily", fontFamilyVar);
       console.log(`Bound fontFamily to variable: ${fontFamilyVar.name}`);
@@ -415,48 +1392,76 @@ async function findSpacingVariableByValue(collectionName: string, groupName: str
 async function createFontSystem(versionNumber: string): Promise<void> {
   console.log(`Creating font system with version: ${versionNumber}`);
   
-  // Create font system collection with single mode
+  // Create font system collection with multiple modes
   const fontCollection = figma.variables.createVariableCollection(`SCS Font ${versionNumber}`);
-  const mode = fontCollection.modes[0];
-  fontCollection.renameMode(mode.modeId, "Default");
   
-  // Create font family variables as strings
-  await createStringVariable(fontCollection, mode.modeId, "Font Family/Primary", "GT Standard");
+  // Create Inter mode
+  const interMode = fontCollection.modes[0];
+  fontCollection.renameMode(interMode.modeId, "Inter");
   
-  // Create typography scale variables that reference spacing tokens
-  for (const [scaleName, style] of Object.entries(TYPOGRAPHY_SCALE)) {
-    const baseName = `SCS Font System/${scaleName}`;
-    
-    // Font size - reference General spacing token
-    const fontSizeVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "General", style.fontSize);
-    if (fontSizeVarId) {
-      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/font-size`, fontSizeVarId);
-    } else {
-      await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-size`, style.fontSize);
-    }
-    
-    // Line height - reference General spacing token
-    const lineHeightVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "General", style.lineHeight);
-    if (lineHeightVarId) {
-      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/line-height`, lineHeightVarId);
-    } else {
-      await createFontVariable(fontCollection, mode.modeId, `${baseName}/line-height`, style.lineHeight);
-    }
-    
-    // Letter spacing - reference Kerning token
-    const letterSpacingVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "Kerning", style.letterSpacing);
-    if (letterSpacingVarId) {
-      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/letter-spacing`, letterSpacingVarId);
-    } else {
-      await createFontVariable(fontCollection, mode.modeId, `${baseName}/letter-spacing`, style.letterSpacing);
-    }
-    
-    // Font weight - reference Weight token
-    const fontWeightVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "Weight", style.fontWeight);
-    if (fontWeightVarId) {
-      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/font-weight`, fontWeightVarId);
-    } else {
-      await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-weight`, style.fontWeight);
+  // Create GT Standard mode
+  const gtStandardModeId = fontCollection.addMode("GT Standard");
+  
+  // Create SF Pro mode
+  const sfProModeId = fontCollection.addMode("SF Pro");
+  
+  // Create SF Pro Rounded mode (commented out due to 4-mode limit)
+  // const sfRoundedModeId = fontCollection.addMode("SF Pro Rounded");
+  
+  // Create Apercu Pro mode
+  const apercuProModeId = fontCollection.addMode("Apercu Pro");
+  
+  // Create font family variables for all modes
+  await createStringVariable(fontCollection, interMode.modeId, "Font Family/Primary", "Inter");
+  await createStringVariable(fontCollection, gtStandardModeId, "Font Family/Primary", "GT Standard");
+  await createStringVariable(fontCollection, sfProModeId, "Font Family/Primary", "SF Pro");
+  // await createStringVariable(fontCollection, sfRoundedModeId, "Font Family/Primary", "SF Pro Rounded");
+  await createStringVariable(fontCollection, apercuProModeId, "Font Family/Primary", "Apercu Pro Var");
+  
+  // Create typography scale variables that reference spacing tokens for all modes
+  const modes = [
+    { modeId: interMode.modeId, name: "Inter", scale: TYPOGRAPHY_SCALE },
+    { modeId: gtStandardModeId, name: "GT Standard", scale: GT_STANDARD_TYPOGRAPHY_SCALE },
+    { modeId: sfProModeId, name: "SF Pro", scale: SF_PRO_TYPOGRAPHY_SCALE },
+    // { modeId: sfRoundedModeId, name: "SF Pro Rounded", scale: SF_ROUNDED_TYPOGRAPHY_SCALE },
+    { modeId: apercuProModeId, name: "Apercu Pro Var", scale: APERCU_PRO_TYPOGRAPHY_SCALE }
+  ];
+  
+  for (const mode of modes) {
+    for (const [scaleName, style] of Object.entries(mode.scale)) {
+      const baseName = `SCS Font System/${scaleName}`;
+      
+      // Font size - reference General spacing token
+      const fontSizeVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "General", style.fontSize);
+      if (fontSizeVarId) {
+        await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/font-size`, fontSizeVarId);
+      } else {
+        await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-size`, style.fontSize);
+      }
+      
+      // Line height - reference General spacing token
+      const lineHeightVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "General", style.lineHeight);
+      if (lineHeightVarId) {
+        await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/line-height`, lineHeightVarId);
+      } else {
+        await createFontVariable(fontCollection, mode.modeId, `${baseName}/line-height`, style.lineHeight);
+      }
+      
+      // Letter spacing - reference Kerning token
+      const letterSpacingVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "Kerning", style.letterSpacing);
+      if (letterSpacingVarId) {
+        await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/letter-spacing`, letterSpacingVarId);
+      } else {
+        await createFontVariable(fontCollection, mode.modeId, `${baseName}/letter-spacing`, style.letterSpacing);
+      }
+      
+      // Font weight - reference Weight token
+      const fontWeightVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "Weight", style.fontWeight);
+      if (fontWeightVarId) {
+        await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/font-weight`, fontWeightVarId);
+      } else {
+        await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-weight`, style.fontWeight);
+      }
     }
   }
   
@@ -899,8 +1904,44 @@ if (!meetsAAContrast(colorHex, backgroundColor)) {
 let isClosing = false;
 
 figma.ui.onmessage = async (msg: PluginMessage) => {
+  if (msg.type === "test-gt-standard") {
+    const isAvailable = await testGTStandardFont();
+    figma.ui.postMessage({ type: "gt-standard-test-result", available: isAvailable });
+    return;
+  }
+  
+  if (msg.type === "discover-gt-standard") {
+    await discoverGTStandardFonts();
+    return;
+  }
+  
+  if (msg.type === "update-font-mode") {
+    const { fontMode } = msg;
+    if (fontMode) {
+      setFontMode(fontMode);
+      await updateExistingTextNodes();
+    }
+    return;
+  }
+  
+  if (msg.type === "bind-font-variables") {
+    await bindTextNodesToFontVariables();
+    return;
+  }
+  
   if (msg.type === "generate-palette") {
-    const { hexColor, neutral, success, error, appearance, includePrimitives, exportDemo, exportDocumentation: shouldExportDocumentation, includeFontSystem } = msg;
+    const { 
+      hexColor = "#3B82F6", 
+      neutral = "#6B7280", 
+      success = "#10B981", 
+      error = "#EF4444", 
+      appearance = "both", 
+      includePrimitives = true, 
+      exportDemo = false, 
+      exportDocumentation: shouldExportDocumentation = false, 
+      includeFontSystem = false, 
+      fontMode 
+    } = msg;
     try {
       // Clear the hex values map at the start of each run to ensure fresh values
       variableHexValues.clear();
@@ -909,6 +1950,11 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
       console.log("Generating palette with message:", msg);
       const versionNumber = await getNextVersionNumber();
       console.log("Next version number:", versionNumber);
+      
+      // Set font mode if specified
+      if (fontMode) {
+        setFontMode(fontMode);
+      }
       
       const lightBrandTheme: RadixTheme = generateRadixColors({
         appearance: "light",
@@ -1012,6 +2058,8 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
           await createFontSystem(versionNumber);
           // Create text styles after all variables are set up
           await createTextStyles(versionNumber);
+          // Small delay to ensure text styles are fully created
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
 
         // Create demo components if enabled
@@ -1050,6 +2098,8 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
           await createFontSystem(versionNumber);
           // Create text styles after all variables are set up
           await createTextStyles(versionNumber);
+          // Small delay to ensure text styles are fully created
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
 
         // Create demo components if enabled
@@ -1592,11 +2642,15 @@ async function applyVariableWithFallback(
 async function exportDemoComponents(collection: VariableCollection, semanticCollection: VariableCollection | null = null) {
   console.log("exportDemoComponents called with collection:", collection.name);
   try {
-    // Load required fonts
-    await Promise.all([
-      figma.loadFontAsync({ family: "Inter", style: "Regular" }),
-      figma.loadFontAsync({ family: "Inter", style: "Medium" })
-    ]);
+    // Load required fonts with error handling
+    try {
+      await Promise.all([
+        loadFontWithFallback(getCurrentFontFamily(), "Regular"),
+        loadFontWithFallback(getCurrentFontFamily(), "Medium")
+      ]);
+    } catch (error) {
+      console.warn("Failed to load some fonts, continuing with available fonts:", error);
+    }
     
     // Create main frame
     const frame = figma.createFrame();
@@ -1708,10 +2762,10 @@ async function createButton(
 
   const buttonText = figma.createText();
   buttonText.characters = text;
-  buttonText.fontSize = 14;
-  buttonText.fontName = { family: "Inter", style: "Medium" };
   buttonText.layoutAlign = "CENTER";
   buttonText.textAlignHorizontal = "CENTER";
+  // Apply label14 text style
+  await applyTextStyle(buttonText, "label14");
 
   // Set text color to "text-icon/ti-brand-primary"
   await applyVariableWithFallback(
@@ -1775,19 +2829,18 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   content.name = "Content";
   content.layoutMode = "VERTICAL";
   content.layoutAlign = "STRETCH";
-  content.itemSpacing = 8;
+  content.itemSpacing = 12;
   content.fills = [];
 
   const title = figma.createText();
   title.name = "Title";
   title.characters = "Product Title";
-  title.fontSize = 18;
-  title.fontName = { family: "Inter", style: "Medium" };
   title.layoutAlign = "STRETCH"; // Fill horizontally
-  title.textAutoResize = "NONE"; // Disable auto-resizing
-  title.lineHeight = { value: 22, unit: "PIXELS" }; // Set line height
+  title.textAutoResize = "HEIGHT"; // Auto-height
   title.textTruncation = 'ENDING'; // Enable truncation
-  title.resizeWithoutConstraints(336, 22); // Set fixed dimensions
+  // Remove fixed height to allow auto-height to work
+  // Apply label18 text style
+  await applyTextStyle(title, "label18");
 
   // Set text color with error handling
   await applyVariableWithFallback(
@@ -1800,13 +2853,12 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   const description = figma.createText();
   description.name = "Description";
   description.characters = "Lorem ipsum dolor sit amet, elit lacus consectetur adipiscing. Integer euismod sodales nam tomer lima consequat.";
-  description.fontSize = 14;
-  description.fontName = { family: "Inter", style: "Regular" };
   description.layoutAlign = "STRETCH"; // Fill horizontally
-  description.textAutoResize = "NONE"; // Disable auto-resize
-  description.lineHeight = { value: 20, unit: "PIXELS" }; // Set line height
+  description.textAutoResize = "HEIGHT"; // Auto-height
   description.textTruncation = 'ENDING'; // Enable truncation with ellipsis
-  description.resizeWithoutConstraints(336, 40); // Set fixed height
+  description.maxLines = 2; // Limit to 2 lines
+  // Apply body14 text style
+  await applyTextStyle(description, "body14");
 
   // Set secondary text color with error handling
   await applyVariableWithFallback(
@@ -1975,7 +3027,7 @@ async function createProductListItem(
   content.layoutGrow = 1; // Allow it to grow and fill the available space
   content.primaryAxisSizingMode = "AUTO"; // Hug contents vertically
   content.counterAxisSizingMode = "AUTO"; // Hug contents horizontally
-  content.itemSpacing = 2;
+  content.itemSpacing = 10;
   content.fills = [];
 
   // Thumbnail
@@ -2003,15 +3055,13 @@ async function createProductListItem(
 
   const itemTitle = figma.createText();
   itemTitle.characters = title;
-  itemTitle.fontSize = 14;
-  itemTitle.fontName = { family: "Inter", style: "Medium" };
   itemTitle.layoutAlign = "STRETCH"; // Fill horizontally
-  itemTitle.textAutoResize = "NONE"; // Disable auto-resizing
-  itemTitle.lineHeight = { value: 16, unit: "PIXELS" }; // Set line height
+  itemTitle.textAutoResize = "HEIGHT"; // Auto-height
   itemTitle.textTruncation = 'ENDING'; // Enable truncation
+  // Apply label14 text style
+  await applyTextStyle(itemTitle, "label14");
   
-  // Set fixed dimensions (if not in an auto-layout frame)
-  itemTitle.resizeWithoutConstraints(180, 16);
+  // Remove fixed height to allow auto-height to work
 
   // Set text color with error handling
   await applyVariableWithFallback(
@@ -2023,13 +3073,12 @@ async function createProductListItem(
 
   const description = figma.createText();
   description.characters = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer euismod sodales nam tomer lima consequat.";
-  description.fontSize = 12;
-  description.fontName = { family: "Inter", style: "Regular" };
   description.layoutAlign = "STRETCH"; // Fill horizontally
-  description.textAutoResize = "NONE"; // Disable auto-resize
-  description.lineHeight = { value: 16, unit: "PIXELS" }; // Set line height
+  description.textAutoResize = "HEIGHT"; // Auto-height
   description.textTruncation = 'ENDING'; // Enable truncation with ellipsis
-  description.resizeWithoutConstraints(180, 31); // Set fixed height to 30 pixels
+  description.maxLines = 2; // Limit to 2 lines
+  // Apply body12 text style
+  await applyTextStyle(description, "body12");
 
   // Set secondary text color with error handling
   await applyVariableWithFallback(
@@ -2258,13 +3307,13 @@ async function createNotification(
 
   const text = figma.createText();
   text.characters = message;
-  text.fontSize = 14;
-  text.fontName = { family: "Inter", style: "Regular" };
   text.layoutAlign = "STRETCH"; // Stretch horizontally
-  text.textAutoResize = "NONE"; // Hug contents vertically
-  text.lineHeight = { value: 20, unit: "PIXELS" }; // Set line height
+  text.textAutoResize = "HEIGHT"; // Auto-height
   text.textTruncation = 'ENDING'; // Enable truncation with ellipsis
-  text.resizeWithoutConstraints (289, 40); // Set fixed height
+  text.maxLines = 2; // Limit to 2 lines
+  // Remove fixed height to allow auto-height to work
+  // Apply body14 text style
+  await applyTextStyle(text, "body14");
 
   // Set text color with error handling
   await applyVariableWithFallback(
@@ -2357,12 +3406,16 @@ const DOCUMENTATION_ITEMS: DocumentationItem[] = [
 async function exportDocumentation(collection: VariableCollection, semanticCollection: VariableCollection | null = null) {
   console.log("exportDocumentation called with collection:", collection.name);
   try {
-    // Load required fonts
-    await Promise.all([
-      figma.loadFontAsync({ family: "Inter", style: "Regular" }),
-      figma.loadFontAsync({ family: "Inter", style: "Medium" }),
-      figma.loadFontAsync({ family: "Inter", style: "Bold" })
-    ]);
+    // Load required fonts with error handling
+    try {
+      await Promise.all([
+        loadFontWithFallback(getCurrentFontFamily(), "Regular"),
+        loadFontWithFallback(getCurrentFontFamily(), "Medium"),
+        loadFontWithFallback(getCurrentFontFamily(), "Bold")
+      ]);
+    } catch (error) {
+      console.warn("Failed to load some fonts, continuing with available fonts:", error);
+    }
     
     // Create main frame
     const frame = figma.createFrame();
@@ -2404,9 +3457,9 @@ frame.appendChild(titleContainer);
     // Add title
     const title = figma.createText();
     title.characters = "Color";
-    title.fontSize = 32;
-    title.fontName = { family: "Inter", style: "Bold" };
-    title.textAutoResize = "HEIGHT";
+    title.textAutoResize = "WIDTH_AND_HEIGHT";
+    // Apply display52 text style
+    await applyTextStyle(title, "display52");
     // Apply text color variable
     await applyVariableWithFallback(title, semanticCollection || collection, "text-icon/ti-neutral-primary", 'text');
     titleContainer.appendChild(title);
@@ -2453,8 +3506,8 @@ async function createCategorySection(category: string, items: DocumentationItem[
   section.counterAxisSizingMode = "FIXED";
   section.paddingLeft = 120;
   section.paddingRight = 120;
-  section.paddingTop = isFirstSection ? 40 : 40;
-  section.paddingBottom = 40;
+  section.paddingTop = isFirstSection ? 48 : 48;
+  section.paddingBottom = 48;
   section.itemSpacing = 0;
   section.fills = [];
   section.layoutAlign = "STRETCH";
@@ -2473,10 +3526,10 @@ async function createCategorySection(category: string, items: DocumentationItem[
   
   const heading = figma.createText();
   heading.characters = category.charAt(0).toUpperCase() + category.slice(1);
-  heading.fontSize = 18;
-  heading.fontName = { family: "Inter", style: "Bold" };
   heading.textAutoResize = "HEIGHT";
   heading.layoutAlign = "STRETCH";
+  // Apply label18 text style
+  await applyTextStyle(heading, "label18");
   // Apply text color variable
   await applyVariableWithFallback(heading, collection, "text-icon/ti-neutral-secondary", 'text');
   
@@ -2541,10 +3594,10 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   // Style Name header
   const styleNameHeader = figma.createText();
   styleNameHeader.characters = "Style Name";
-  styleNameHeader.fontSize = 12;
-  styleNameHeader.fontName = { family: "Inter", style: "Medium" };
   styleNameHeader.textAutoResize = "HEIGHT";
-  styleNameHeader.resize(375, styleNameHeader.height);
+  // Remove fixed height to allow auto-height to work
+  // Apply label12 text style
+  await applyTextStyle(styleNameHeader, "label12");
   // Apply text color variable
   await applyVariableWithFallback(styleNameHeader, collection, "text-icon/ti-neutral-secondary", 'text');
   headerRow.appendChild(styleNameHeader);
@@ -2552,10 +3605,10 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   // Primitive header
   const primitiveHeader = figma.createText();
   primitiveHeader.characters = "Primitive - Radix";
-  primitiveHeader.fontSize = 12;
-  primitiveHeader.fontName = { family: "Inter", style: "Medium" };
   primitiveHeader.textAutoResize = "HEIGHT";
-  primitiveHeader.resize(225, primitiveHeader.height);
+  // Remove fixed height to allow auto-height to work
+  // Apply label12 text style
+  await applyTextStyle(primitiveHeader, "label12");
   // Apply text color variable
   await applyVariableWithFallback(primitiveHeader, collection, "text-icon/ti-neutral-secondary", 'text');
   headerRow.appendChild(primitiveHeader);
@@ -2563,10 +3616,10 @@ async function createHeaderRow(category: string, collection: VariableCollection)
   // Hex Value header
   const hexValueHeader = figma.createText();
   hexValueHeader.characters = "Hex Value";
-  hexValueHeader.fontSize = 12;
-  hexValueHeader.fontName = { family: "Inter", style: "Medium" };
   hexValueHeader.textAutoResize = "HEIGHT";
-  hexValueHeader.resize(225, hexValueHeader.height);
+  // Remove fixed height to allow auto-height to work
+  // Apply label12 text style
+  await applyTextStyle(hexValueHeader, "label12");
   // Apply text color variable
   await applyVariableWithFallback(hexValueHeader, collection, "text-icon/ti-neutral-secondary", 'text');
   headerRow.appendChild(hexValueHeader);
@@ -2633,9 +3686,9 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   // Style name
   const styleName = figma.createText();
   styleName.characters = item.name.toLowerCase();
-  styleName.fontSize = 14;
-  styleName.fontName = { family: "Inter", style: "Regular" };
   styleName.textAutoResize = "WIDTH_AND_HEIGHT";
+  // Apply body14 text style
+  await applyTextStyle(styleName, "body14");
   // Apply text color variable
   await applyVariableWithFallback(styleName, collection, "text-icon/ti-neutral-primary", 'text');
   
@@ -2673,9 +3726,9 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
 
   const primitiveText = figma.createText();
   primitiveText.characters = item.primitiveSource.toLowerCase();
-  primitiveText.fontSize = 12;
-  primitiveText.fontName = { family: "Inter", style: "Regular" };
-  primitiveText.textAutoResize = "HEIGHT";
+  primitiveText.textAutoResize = "WIDTH_AND_HEIGHT";
+  // Apply body12 text style
+  await applyTextStyle(primitiveText, "body12");
   // Apply text color variable
   await applyVariableWithFallback(primitiveText, collection, "text-icon/ti-neutral-secondary", 'text');
   primitiveBadge.appendChild(primitiveText);
@@ -2740,10 +3793,10 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
       // Use the normalizeHex function to ensure 6 characters
       const normalizedHex = normalizeHex(hexValue);
       hexValueText.characters = normalizedHex;
-      hexValueText.fontSize = 12;
-      hexValueText.fontName = { family: "Inter", style: "Regular" };
-      hexValueText.textAutoResize = "HEIGHT";
+      hexValueText.textAutoResize = "WIDTH_AND_HEIGHT";
       hexValueText.textAlignHorizontal = "CENTER";
+      // Apply body12 text style
+      await applyTextStyle(hexValueText, "body12");
       // Apply text color variable
       await applyVariableWithFallback(hexValueText, collection, "text-icon/ti-neutral-secondary", 'text');
       hexValueBadge.appendChild(hexValueText);
@@ -2771,9 +3824,9 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
     // Use the normalizeHex function to ensure 6 characters
     const normalizedHex = normalizeHex(hexValue);
     hexValueText.characters = normalizedHex;
-    hexValueText.fontSize = 12;
-    hexValueText.fontName = { family: "Inter", style: "Regular" };
-    hexValueText.textAutoResize = "HEIGHT";
+    hexValueText.textAutoResize = "WIDTH_AND_HEIGHT";
+    // Apply body12 text style
+    await applyTextStyle(hexValueText, "body12");
           // Apply text color variable
       await applyVariableWithFallback(hexValueText, collection, "text-icon/ti-neutral-secondary", 'text');
     hexValueBadge.appendChild(hexValueText);
