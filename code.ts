@@ -331,9 +331,8 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     // Create the text style first
     const textStyle = figma.createTextStyle();
     textStyle.name = styleName;
-    textStyle.fontName = { family: fontFamily, style: currentFontStyle };
     
-    // Set initial values (fallback)
+    // Set initial values (fallback) - don't set fontName when using variable binding
     textStyle.fontSize = style.fontSize;
     textStyle.lineHeight = { value: style.lineHeight, unit: "PIXELS" };
     textStyle.letterSpacing = { value: style.letterSpacing, unit: "PIXELS" };
