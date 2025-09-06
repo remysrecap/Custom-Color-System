@@ -291,6 +291,32 @@ async function createTextStyles(versionNumber: string): Promise<void> {
   const collections = await figma.variables.getLocalVariableCollectionsAsync();
   const fontCollection = collections.find(c => c.name === `CCS Font System ${versionNumber}`);
   
+  // Get the font family from the font family variable
+  if (fontCollection) {
+    const allFontVariables = await Promise.all(
+      fontCollection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
+    );
+    
+    const fontFamilyVar = allFontVariables.find(v => v && v.name === "Font Family/Primary");
+    
+    if (fontFamilyVar) {
+      const fontFamilyValue = fontFamilyVar.valuesByMode[fontCollection.modes[0].modeId];
+      if (typeof fontFamilyValue === 'string') {
+        fontFamily = fontFamilyValue;
+        console.log(`Using font family from variable: ${fontFamily}`);
+        
+        // Try to load the font family from the variable
+        try {
+          await figma.loadFontAsync({ family: fontFamily, style: "Regular" });
+        } catch (error) {
+          console.log(`${fontFamily} not available, falling back to Inter`);
+          fontFamily = "Inter";
+          await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+        }
+      }
+    }
+  }
+  
   if (!fontCollection) {
     console.log("Font collection not found, creating text styles with fallback values");
     // Fallback to original behavior if collection not found
@@ -364,33 +390,38 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     textStyle.name = styleName;
     textStyle.fontName = { family: fontFamily, style: currentFontStyle };
     
-    // Use values from variables if available, otherwise fallback to original values
+    // Get the actual values from the typography variables (which reference spacing tokens)
+    let finalFontSize = style.fontSize;
+    let finalLineHeight = style.lineHeight;
+    let finalLetterSpacing = style.letterSpacing;
+    
     if (fontSizeVar) {
       const fontSizeValue = fontSizeVar.valuesByMode[fontCollection.modes[0].modeId];
-      textStyle.fontSize = typeof fontSizeValue === 'number' ? fontSizeValue : style.fontSize;
-    } else {
-      textStyle.fontSize = style.fontSize;
+      if (typeof fontSizeValue === 'number') {
+        finalFontSize = fontSizeValue;
+      }
     }
     
     if (lineHeightVar) {
       const lineHeightValue = lineHeightVar.valuesByMode[fontCollection.modes[0].modeId];
-      textStyle.lineHeight = { 
-        value: typeof lineHeightValue === 'number' ? lineHeightValue : style.lineHeight, 
-        unit: "PIXELS" 
-      };
-    } else {
-      textStyle.lineHeight = { value: style.lineHeight, unit: "PIXELS" };
+      if (typeof lineHeightValue === 'number') {
+        finalLineHeight = lineHeightValue;
+      }
     }
     
     if (letterSpacingVar) {
       const letterSpacingValue = letterSpacingVar.valuesByMode[fontCollection.modes[0].modeId];
-      textStyle.letterSpacing = { 
-        value: typeof letterSpacingValue === 'number' ? letterSpacingValue : style.letterSpacing, 
-        unit: "PIXELS" 
-      };
-    } else {
-      textStyle.letterSpacing = { value: style.letterSpacing, unit: "PIXELS" };
+      if (typeof letterSpacingValue === 'number') {
+        finalLetterSpacing = letterSpacingValue;
+      }
     }
+    
+    // Apply the values to the text style
+    textStyle.fontSize = finalFontSize;
+    textStyle.lineHeight = { value: finalLineHeight, unit: "PIXELS" };
+    textStyle.letterSpacing = { value: finalLetterSpacing, unit: "PIXELS" };
+    
+    console.log(`Text style ${styleName} uses values: fontSize=${finalFontSize}, lineHeight=${finalLineHeight}, letterSpacing=${finalLetterSpacing}`);
     
     console.log(`Created text style with variable references: ${styleName}`);
   }
