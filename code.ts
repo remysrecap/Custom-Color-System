@@ -325,7 +325,7 @@ async function createTextStyles(): Promise<void> {
 
 // Helper function to find spacing variable by value
 async function findSpacingVariableByValue(collectionName: string, groupName: string, value: number): Promise<string | null> {
-  const collections = figma.variables.getLocalVariableCollections();
+  const collections = await figma.variables.getLocalVariableCollectionsAsync();
   const spacingCollection = collections.find(c => c.name === collectionName);
   
   if (!spacingCollection) return null;
