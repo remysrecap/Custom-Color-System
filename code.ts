@@ -355,6 +355,11 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     textStyle.letterSpacing = { value: style.letterSpacing, unit: "PIXELS" };
     
     // Bind variables using setBoundVariable method
+    if (fontFamilyVar) {
+      textStyle.setBoundVariable("fontFamily", fontFamilyVar);
+      console.log(`Bound fontFamily to variable: ${fontFamilyVar.name}`);
+    }
+    
     if (fontSizeVar) {
       textStyle.setBoundVariable("fontSize", fontSizeVar);
       console.log(`Bound fontSize to variable: ${fontSizeVar.name}`);
