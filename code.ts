@@ -305,8 +305,16 @@ async function createTextStyles(versionNumber: string): Promise<void> {
   
   console.log(`Using font family from variable: ${fontFamilyValue}`);
   
-  // Use the font family from the variable (no need to load it since we're binding the variable)
-  const fontFamily = fontFamilyValue;
+  // Try to load the font family
+  let fontFamily = fontFamilyValue;
+  try {
+    await figma.loadFontAsync({ family: fontFamily, style: "Regular" });
+    console.log(`Successfully loaded ${fontFamily} font`);
+  } catch (error) {
+    console.log(`${fontFamily} not available, falling back to Inter`);
+    fontFamily = "Inter";
+    await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+  }
   
   // Create text styles with variable bindings
   for (const [scaleName, style] of Object.entries(TYPOGRAPHY_SCALE)) {
@@ -322,6 +330,14 @@ async function createTextStyles(versionNumber: string): Promise<void> {
       currentFontStyle = "Medium";
     }
     
+    // Try to load the specific font style
+    try {
+      await figma.loadFontAsync({ family: fontFamily, style: currentFontStyle });
+    } catch (error) {
+      console.log(`${fontFamily} ${currentFontStyle} not available, using Regular`);
+      currentFontStyle = "Regular";
+    }
+    
     // Find the typography variables for this scale
     const fontSizeVar = allVariables.find(v => v && v.name === `${styleName}/font-size`);
     const lineHeightVar = allVariables.find(v => v && v.name === `${styleName}/line-height`);
@@ -331,8 +347,14 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     // Create the text style first
     const textStyle = figma.createTextStyle();
     textStyle.name = styleName;
+    textStyle.fontName = { family: fontFamily, style: currentFontStyle };
     
-    // Bind variables using setBoundVariable method - no direct property assignments
+    // Set initial values (fallback)
+    textStyle.fontSize = style.fontSize;
+    textStyle.lineHeight = { value: style.lineHeight, unit: "PIXELS" };
+    textStyle.letterSpacing = { value: style.letterSpacing, unit: "PIXELS" };
+    
+    // Bind variables using setBoundVariable method
     if (fontFamilyVar) {
       textStyle.setBoundVariable("fontFamily", fontFamilyVar);
       console.log(`Bound fontFamily to variable: ${fontFamilyVar.name}`);
