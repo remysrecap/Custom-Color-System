@@ -231,7 +231,10 @@ async function createSpacingCollection(versionNumber: string): Promise<VariableC
   
   // Create Kerning tokens
   for (const value of SPACING_TOKENS.kerning) {
-    await createFontVariable(collection, mode.modeId, `Kerning/${value}`, value);
+    // Convert negative values and decimals to valid variable names
+    const name = value < 0 ? `Kerning/neg${Math.abs(value).toString().replace('.', '')}` : 
+                 `Kerning/${value.toString().replace('.', '')}`;
+    await createFontVariable(collection, mode.modeId, name, value);
   }
   
   // Create Weight tokens
