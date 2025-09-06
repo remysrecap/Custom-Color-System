@@ -93,62 +93,74 @@ const FONT_FAMILIES = {
   primary: "GT Standard"
 } as const;
 
-// Typography scale definitions based on the images
+// Spacing token definitions
+const SPACING_TOKENS = {
+  // General spacing: 2-96 with increments of 2→4→8
+  general: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 56, 64, 72, 80, 88, 96],
+  
+  // Kerning: -2.00 to 2.00 with 0.15 increments, then 0.25 near zero
+  kerning: [-2.00, -1.85, -1.70, -1.55, -1.40, -1.25, -1.10, -0.95, -0.80, -0.65, -0.50, -0.35, -0.25, -0.15, 0, 0.15, 0.25, 0.35, 0.50, 0.65, 0.80, 0.95, 1.10, 1.25, 1.40, 1.55, 1.70, 1.85, 2.00],
+  
+  // Weight: 100-800 in 100 increments
+  weight: [100, 200, 300, 400, 500, 600, 700, 800]
+};
+
+// Typography scale definitions using spacing tokens
 const TYPOGRAPHY_SCALE: TypographyScale = {
   hero: {
-    fontSize: 32,
-    lineHeight: 36,
-    letterSpacing: -1.5,
-    fontWeight: 700,
+    fontSize: 32, // General/32
+    lineHeight: 36, // General/36
+    letterSpacing: -1.5, // Kerning/-1.5 (closest to -1.55)
+    fontWeight: 700, // Weight/700
     fontStyle: "M Bd"
   },
   header: {
-    fontSize: 20,
-    lineHeight: 24,
-    letterSpacing: -1,
-    fontWeight: 600,
+    fontSize: 20, // General/20
+    lineHeight: 24, // General/24
+    letterSpacing: -1, // Kerning/-1 (closest to -1.10)
+    fontWeight: 600, // Weight/600
     fontStyle: "M Smbd"
   },
   section: {
-    fontSize: 18,
-    lineHeight: 22,
-    letterSpacing: -1.25,
-    fontWeight: 600,
+    fontSize: 18, // General/18
+    lineHeight: 22, // General/22 (closest to 20)
+    letterSpacing: -1.25, // Kerning/-1.25
+    fontWeight: 600, // Weight/600
     fontStyle: "M Smbd"
   },
   subtitle: {
-    fontSize: 16,
-    lineHeight: 20,
-    letterSpacing: -1,
-    fontWeight: 600,
+    fontSize: 16, // General/16
+    lineHeight: 20, // General/20
+    letterSpacing: -1, // Kerning/-1 (closest to -1.10)
+    fontWeight: 600, // Weight/600
     fontStyle: "M Smbd"
   },
   bodyBtn: {
-    fontSize: 14,
-    lineHeight: 22,
-    letterSpacing: -0.5,
-    fontWeight: 600,
+    fontSize: 14, // General/14
+    lineHeight: 22, // General/22 (closest to 20)
+    letterSpacing: -0.5, // Kerning/-0.5
+    fontWeight: 600, // Weight/600
     fontStyle: "M Smbd"
   },
   bodyBtnSm: {
-    fontSize: 12,
-    lineHeight: 18,
-    letterSpacing: -0.5,
-    fontWeight: 600,
+    fontSize: 12, // General/12
+    lineHeight: 18, // General/18
+    letterSpacing: -0.5, // Kerning/-0.5
+    fontWeight: 600, // Weight/600
     fontStyle: "M Smbd"
   },
   caption: {
-    fontSize: 11,
-    lineHeight: 16,
-    letterSpacing: -0.5,
-    fontWeight: 600,
+    fontSize: 11, // General/11 (closest to 10)
+    lineHeight: 16, // General/16
+    letterSpacing: -0.5, // Kerning/-0.5
+    fontWeight: 600, // Weight/600
     fontStyle: "M Smbd"
   },
   badge: {
-    fontSize: 10,
-    lineHeight: 13,
-    letterSpacing: -0.3,
-    fontWeight: 600,
+    fontSize: 10, // General/10
+    lineHeight: 13, // General/13 (closest to 12)
+    letterSpacing: -0.3, // Kerning/-0.3 (closest to -0.35)
+    fontWeight: 600, // Weight/600
     fontStyle: "M Smbd"
   }
 };
@@ -176,6 +188,59 @@ async function createFontVariable(
   await variable.setValueForMode(modeId, value);
   console.log(`Created font variable ${name} with value: ${value}`);
   return variable;
+}
+
+// Function to create string variables (for font families)
+async function createStringVariable(
+  collection: VariableCollection,
+  modeId: string,
+  name: string,
+  value: string
+): Promise<Variable | null> {
+  console.log(`Creating string variable: ${name} with value: ${value}`);
+  const existingVariable = await findExistingVariable(collection, name);
+
+  if (existingVariable) {
+    const variable = await figma.variables.getVariableByIdAsync(existingVariable);
+    if (variable) {
+      await variable.setValueForMode(modeId, value);
+      console.log(`Updated string variable ${name} with value: ${value}`);
+    }
+    return variable;
+  }
+
+  const variable = figma.variables.createVariable(name, collection, "STRING");
+  await variable.setValueForMode(modeId, value);
+  console.log(`Created string variable ${name} with value: ${value}`);
+  return variable;
+}
+
+// Function to create spacing collection
+async function createSpacingCollection(versionNumber: string): Promise<VariableCollection> {
+  console.log(`Creating spacing collection with version: ${versionNumber}`);
+  const collection = figma.variables.createVariableCollection(`CCS Spacing ${versionNumber}`);
+  
+  // Use single mode (no light/dark)
+  const mode = collection.modes[0];
+  collection.renameMode(mode.modeId, "Default");
+  
+  // Create General spacing tokens
+  for (const value of SPACING_TOKENS.general) {
+    await createFontVariable(collection, mode.modeId, `General/${value}`, value);
+  }
+  
+  // Create Kerning tokens
+  for (const value of SPACING_TOKENS.kerning) {
+    await createFontVariable(collection, mode.modeId, `Kerning/${value}`, value);
+  }
+  
+  // Create Weight tokens
+  for (const value of SPACING_TOKENS.weight) {
+    await createFontVariable(collection, mode.modeId, `Weight/${value}`, value);
+  }
+  
+  console.log(`Spacing collection created successfully`);
+  return collection;
 }
 
 // Function to create Figma text styles
@@ -231,36 +296,38 @@ async function createTextStyles(): Promise<void> {
 }
 
 // Font system creation function
-async function createFontSystem(
-  collection: VariableCollection,
-  modeId: string
-): Promise<void> {
-  console.log(`Creating font system for mode: ${modeId}`);
+async function createFontSystem(versionNumber: string): Promise<void> {
+  console.log(`Creating font system with version: ${versionNumber}`);
   
-  // Create font family variables
-  await createFontVariable(collection, modeId, "Font Family/Primary", 0); // GT Standard
+  // Create font system collection with single mode
+  const fontCollection = figma.variables.createVariableCollection(`CCS Font System ${versionNumber}`);
+  const mode = fontCollection.modes[0];
+  fontCollection.renameMode(mode.modeId, "Default");
+  
+  // Create font family variables as strings
+  await createStringVariable(fontCollection, mode.modeId, "Font Family/Primary", "GT Standard");
   
   // Create typography scale variables
   for (const [scaleName, style] of Object.entries(TYPOGRAPHY_SCALE)) {
     const baseName = `Typography/${scaleName}`;
     
     // Font size
-    await createFontVariable(collection, modeId, `${baseName}/font-size`, style.fontSize);
+    await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-size`, style.fontSize);
     
     // Line height
-    await createFontVariable(collection, modeId, `${baseName}/line-height`, style.lineHeight);
+    await createFontVariable(fontCollection, mode.modeId, `${baseName}/line-height`, style.lineHeight);
     
     // Letter spacing
-    await createFontVariable(collection, modeId, `${baseName}/letter-spacing`, style.letterSpacing);
+    await createFontVariable(fontCollection, mode.modeId, `${baseName}/letter-spacing`, style.letterSpacing);
     
     // Font weight
-    await createFontVariable(collection, modeId, `${baseName}/font-weight`, style.fontWeight);
+    await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-weight`, style.fontWeight);
   }
   
   // Create Figma text styles
   await createTextStyles();
   
-  console.log(`Font system created successfully for mode: ${modeId}`);
+  console.log(`Font system created successfully`);
 }
 
 // Utility function to convert hex colors to RGB format for Figma
@@ -785,7 +852,6 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
       let primitiveCollection: VariableCollection | null = null;
       let collection: VariableCollection | null = null;
       let semanticCollection: VariableCollection | null = null;
-      let fontCollection: VariableCollection | null = null;
 
       if (includePrimitives) {
         primitiveCollection = figma.variables.createVariableCollection(`CCS Primitives ${versionNumber}`);
@@ -809,19 +875,8 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
 
         // Create font system if enabled
         if (includeFontSystem) {
-          fontCollection = figma.variables.createVariableCollection(`CCS Font System ${versionNumber}`);
-          
-          if (appearance === "light" || appearance === "both") {
-            const lightMode = fontCollection.modes[0];
-            fontCollection.renameMode(lightMode.modeId, "Light");
-            await createFontSystem(fontCollection, lightMode.modeId);
-          }
-
-          if (appearance === "dark" || appearance === "both") {
-            const darkModeId = appearance === "both" ? 
-              fontCollection.addMode("Dark") : fontCollection.modes[0].modeId;
-            await createFontSystem(fontCollection, darkModeId);
-          }
+          await createFontSystem(versionNumber);
+          await createSpacingCollection(versionNumber);
         }
 
         // Create demo components if enabled
@@ -852,19 +907,8 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
 
         // Create font system if enabled
         if (includeFontSystem) {
-          fontCollection = figma.variables.createVariableCollection(`CCS Font System ${versionNumber}`);
-          
-          if (appearance === "light" || appearance === "both") {
-            const lightMode = fontCollection.modes[0];
-            fontCollection.renameMode(lightMode.modeId, "Light");
-            await createFontSystem(fontCollection, lightMode.modeId);
-          }
-
-          if (appearance === "dark" || appearance === "both") {
-            const darkModeId = appearance === "both" ? 
-              fontCollection.addMode("Dark") : fontCollection.modes[0].modeId;
-            await createFontSystem(fontCollection, darkModeId);
-          }
+          await createFontSystem(versionNumber);
+          await createSpacingCollection(versionNumber);
         }
 
         // Create demo components if enabled
