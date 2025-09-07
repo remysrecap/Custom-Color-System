@@ -229,9 +229,9 @@ async function bindTextNodesToFontVariables(): Promise<void> {
     fontCollection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
   );
   
-  const fontFamilyVar = allVariables.find(v => v && v.name === "Font Family/Primary");
+  const fontFamilyVar = allVariables.find(v => v && v.name === "Font Family");
   if (!fontFamilyVar) {
-    console.warn("⚠️ Font Family/Primary variable not found");
+    console.warn("⚠️ Font Family variable not found");
     return;
   }
   
@@ -250,7 +250,7 @@ async function bindTextNodesToFontVariables(): Promise<void> {
     try {
       // Bind the fontFamily property to the variable
       textNode.setBoundVariable("fontFamily", fontFamilyVar);
-      console.log(`✅ Bound text node to Font Family/Primary variable`);
+      console.log(`✅ Bound text node to Font Family variable`);
     } catch (error) {
       console.error(`Failed to bind text node to variable:`, error);
     }
@@ -431,11 +431,11 @@ const FONT_FAMILIES = {
 
 // Spacing token definitions
 const SPACING_TOKENS = {
-  // General spacing: 2-96 with systematic increments including font system values
-  general: [2, 4, 6, 8, 10, 12, 14, 16, 17, 18, 20, 22, 24, 25, 26, 28, 31, 32, 34, 36, 40, 41, 44, 48, 52, 56, 57, 62, 64, 72, 80, 88, 96],
+  // General spacing: Systematic 1px increments (2-15) + 2px increments (16-64) + 1px increments (56-64) + 4px increments (68-96)
+  general: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 40, 42, 44, 48, 52, 56, 57, 58, 59, 60, 61, 62, 63, 64, 68, 72, 80, 88, 96],
   
   // Kerning: Comprehensive range including tighter font system letter spacing values and GT Standard values
-    kerning: [-2.5, -2.3, -2.2, -2.1, -1.7, -1.6, -1.5, -1.4, -1.3, -1.2, -1.1, -1.0, -0.9, -0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
+  kerning: [-2.5, -2.3, -2.2, -2.1, -1.7, -1.6, -1.5, -1.4, -1.3, -1.2, -1.1, -1.0, -0.9, -0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
   
   // Weight: 100-800 in 100 increments
   weight: [100, 200, 300, 400, 500, 600, 700, 800]
@@ -462,14 +462,14 @@ const TYPOGRAPHY_SCALE: TypographyScale = {
   // Headline fonts - Section titles with medium-heavy weight
   headline34: {
     fontSize: 34, // General/34
-    lineHeight: 41, // General/41
+    lineHeight: 42, // General/42
     letterSpacing: -0.7, // Kerning/[0-7] - Tighter for hierarchy
     fontWeight: 600, // Weight/600 - SemiBold for strong hierarchy
     fontStyle: "Semi Bold"
   },
   headline26: {
     fontSize: 26, // General/26
-    lineHeight: 31, // General/31
+    lineHeight: 32, // General/32
     letterSpacing: -0.5, // Kerning/[0-5] - Tighter for hierarchy
     fontWeight: 600, // Weight/600
     fontStyle: "Semi Bold"
@@ -485,7 +485,7 @@ const TYPOGRAPHY_SCALE: TypographyScale = {
   // Body fonts - Regular text with normal weight
   body18: {
     fontSize: 18, // General/18
-    lineHeight: 25, // General/25
+    lineHeight: 26, // General/26
     letterSpacing: -0.2, // Kerning/[0-2] - Tighter for readability
     fontWeight: 400, // Weight/400 - Regular for comfortable reading
     fontStyle: "Regular"
@@ -515,7 +515,7 @@ const TYPOGRAPHY_SCALE: TypographyScale = {
   // Label fonts - Same sizes as body but heavier weight for buttons/interactions
   label18: {
     fontSize: 18, // General/18
-    lineHeight: 25, // General/25
+    lineHeight: 26, // General/26
     letterSpacing: -0.2, // Kerning/[0-2] - Same as body18
     fontWeight: 600, // Weight/600 - SemiBold for button emphasis
     fontStyle: "Semi Bold"
@@ -538,7 +538,7 @@ const TYPOGRAPHY_SCALE: TypographyScale = {
   // Overline fonts - All caps for badges and overlines
   overline14: {
     fontSize: 14, // General/14
-    lineHeight: 17, // General/17
+    lineHeight: 18, // General/18
     letterSpacing: -0.1, // Kerning/[0-1] - Tighter for caps
     fontWeight: 500, // Weight/500 - Medium for badge emphasis
     fontStyle: "Medium"
@@ -580,14 +580,14 @@ const GT_STANDARD_TYPOGRAPHY_SCALE: TypographyScale = {
   // Headline fonts - M Semibold with significantly tighter letter spacing
   headline34: {
     fontSize: 34, // General/34
-    lineHeight: 41, // General/41
+    lineHeight: 42, // General/42
     letterSpacing: -1.4, // Kerning/[1-4] - Moderately tighter for GT Standard
     fontWeight: 600, // Weight/600 - M Semibold
     fontStyle: "Semi Bold"
   },
   headline26: {
     fontSize: 26, // General/26
-    lineHeight: 31, // General/31
+    lineHeight: 32, // General/32
     letterSpacing: -1.0, // Kerning/[1-0] - Moderately tighter for GT Standard
     fontWeight: 600, // Weight/600 - M Semibold
     fontStyle: "Semi Bold"
@@ -603,7 +603,7 @@ const GT_STANDARD_TYPOGRAPHY_SCALE: TypographyScale = {
   // Body fonts - M Regular with extremely tight letter spacing
   body18: {
     fontSize: 18, // General/18
-    lineHeight: 25, // General/25
+    lineHeight: 26, // General/26
     letterSpacing: -0.8, // Kerning/[0-8] - Moderately tighter for GT Standard Regular
     fontWeight: 400, // Weight/400 - M Regular
     fontStyle: "Regular"
@@ -633,7 +633,7 @@ const GT_STANDARD_TYPOGRAPHY_SCALE: TypographyScale = {
   // Label fonts - M Semibold with tighter letter spacing
   label18: {
     fontSize: 18, // General/18
-    lineHeight: 25, // General/25
+    lineHeight: 26, // General/26
     letterSpacing: -0.3, // Kerning/[0-3] - Moderately tighter for GT Standard
     fontWeight: 600, // Weight/600 - M Semibold
     fontStyle: "Semi Bold"
@@ -656,7 +656,7 @@ const GT_STANDARD_TYPOGRAPHY_SCALE: TypographyScale = {
   // Overline fonts - M Medium for all overlines (all caps)
   overline14: {
     fontSize: 14, // General/14
-    lineHeight: 17, // General/17
+    lineHeight: 18, // General/18
     letterSpacing: -0.6, // Kerning/[0-6] - Moderately tighter for GT Standard
     fontWeight: 500, // Weight/500 - M Medium
     fontStyle: "Medium"
@@ -712,7 +712,7 @@ const SF_PRO_TYPOGRAPHY_SCALE: TypographyScale = {
   },
   headline22: {
     fontSize: 22, // General/22
-    lineHeight: 25, // General/25 - Slightly tighter than Inter
+    lineHeight: 26, // General/26 - Slightly tighter than Inter
     letterSpacing: -0.2, // Kerning/[0-2] - Minimal tightening for SF Pro
     fontWeight: 600, // Weight/600
     fontStyle: "Semi Bold"
@@ -728,14 +728,14 @@ const SF_PRO_TYPOGRAPHY_SCALE: TypographyScale = {
   },
   body16: {
     fontSize: 16, // General/16
-    lineHeight: 21, // General/21 - Slightly tighter than Inter
+    lineHeight: 22, // General/22 - Slightly tighter than Inter
     letterSpacing: -0.2, // Kerning/[0-2] - Tightened a smidge for SF Pro
     fontWeight: 400, // Weight/400
     fontStyle: "Regular"
   },
   body14: {
     fontSize: 14, // General/14
-    lineHeight: 19, // General/19 - Slightly tighter than Inter
+    lineHeight: 20, // General/20 - Slightly tighter than Inter
     letterSpacing: -0.1, // Kerning/[0-1] - Tightened a smidge for SF Pro
     fontWeight: 400, // Weight/400
     fontStyle: "Regular"
@@ -758,14 +758,14 @@ const SF_PRO_TYPOGRAPHY_SCALE: TypographyScale = {
   },
   label16: {
     fontSize: 16, // General/16
-    lineHeight: 21, // General/21 - Same as body16
+    lineHeight: 22, // General/22 - Same as body16
     letterSpacing: -0.2, // Kerning/[0-2] - Tightened a smidge for SF Pro
     fontWeight: 600, // Weight/600
     fontStyle: "Semi Bold"
   },
   label14: {
     fontSize: 14, // General/14
-    lineHeight: 19, // General/19 - Same as body14
+    lineHeight: 20, // General/20 - Same as body14
     letterSpacing: -0.1, // Kerning/[0-1] - Tightened a smidge for SF Pro
     fontWeight: 600, // Weight/600
     fontStyle: "Semi Bold"
@@ -807,7 +807,7 @@ const SF_ROUNDED_TYPOGRAPHY_SCALE: TypographyScale = {
   },
   display52: {
     fontSize: 52, // General/52
-    lineHeight: 59, // General/59 - More generous for rounded forms
+    lineHeight: 60, // General/60 - More generous for rounded forms
     letterSpacing: -0.4, // Kerning/[0-4] - Very minimal tightening for rounded
     fontWeight: 700, // Weight/700
     fontStyle: "Bold"
@@ -830,7 +830,7 @@ const SF_ROUNDED_TYPOGRAPHY_SCALE: TypographyScale = {
   },
   headline22: {
     fontSize: 22, // General/22
-    lineHeight: 27, // General/27 - More generous for rounded forms
+    lineHeight: 28, // General/28 - More generous for rounded forms
     letterSpacing: 0, // Kerning/0 - No tightening for rounded headlines
     fontWeight: 600, // Weight/600
     fontStyle: "Semi Bold"
@@ -846,21 +846,21 @@ const SF_ROUNDED_TYPOGRAPHY_SCALE: TypographyScale = {
   },
   body16: {
     fontSize: 16, // General/16
-    lineHeight: 23, // General/23 - More generous for rounded forms
+    lineHeight: 24, // General/24 - More generous for rounded forms
     letterSpacing: 0, // Kerning/0 - No tightening for rounded body text
     fontWeight: 400, // Weight/400
     fontStyle: "Regular"
   },
   body14: {
     fontSize: 14, // General/14
-    lineHeight: 21, // General/21 - More generous for rounded forms
+    lineHeight: 22, // General/22 - More generous for rounded forms
     letterSpacing: 0, // Kerning/0 - No tightening for rounded body text
     fontWeight: 400, // Weight/400
     fontStyle: "Regular"
   },
   body12: {
     fontSize: 12, // General/12
-    lineHeight: 17, // General/17 - More generous for rounded forms
+    lineHeight: 18, // General/18 - More generous for rounded forms
     letterSpacing: 0, // Kerning/0 - No tightening for rounded body text
     fontWeight: 400, // Weight/400
     fontStyle: "Regular"
@@ -876,14 +876,14 @@ const SF_ROUNDED_TYPOGRAPHY_SCALE: TypographyScale = {
   },
   label16: {
     fontSize: 16, // General/16
-    lineHeight: 23, // General/23 - Same as body16
+    lineHeight: 24, // General/24 - Same as body16
     letterSpacing: 0, // Kerning/0 - No tightening for rounded labels
     fontWeight: 600, // Weight/600
     fontStyle: "Semi Bold"
   },
   label14: {
     fontSize: 14, // General/14
-    lineHeight: 21, // General/21 - Same as body14
+    lineHeight: 22, // General/22 - Same as body14
     letterSpacing: 0, // Kerning/0 - No tightening for rounded labels
     fontWeight: 600, // Weight/600
     fontStyle: "Semi Bold"
@@ -925,7 +925,7 @@ const APERCU_PRO_TYPOGRAPHY_SCALE: TypographyScale = {
   },
   display52: {
     fontSize: 52, // General/52
-    lineHeight: 55, // General/55 - Tighter for editorial feel
+    lineHeight: 56, // General/56 - Tighter for editorial feel
     letterSpacing: -1.5, // Kerning/[1-5] - Tightened medium amount for Apercu
     fontWeight: 700, // Weight/700
     fontStyle: "Bold"
@@ -934,14 +934,14 @@ const APERCU_PRO_TYPOGRAPHY_SCALE: TypographyScale = {
   // Headline fonts - Editorial hierarchy (tightened medium amount)
   headline34: {
     fontSize: 34, // General/34
-    lineHeight: 38, // General/38 - Tighter for editorial feel
+    lineHeight: 40, // General/40 - Tighter for editorial feel
     letterSpacing: -1.0, // Kerning/[1-0] - Tightened medium amount for Apercu
     fontWeight: 600, // Weight/600 - SemiBold for hierarchy
     fontStyle: "Semi Bold"
   },
   headline26: {
     fontSize: 26, // General/26
-    lineHeight: 29, // General/29 - Tighter for editorial feel
+    lineHeight: 30, // General/30 - Tighter for editorial feel
     letterSpacing: -0.8, // Kerning/[0-8] - Tightened medium amount for Apercu
     fontWeight: 600, // Weight/600
     fontStyle: "Semi Bold"
@@ -957,7 +957,7 @@ const APERCU_PRO_TYPOGRAPHY_SCALE: TypographyScale = {
   // Body fonts - Editorial refinement (loosened a bit)
   body18: {
     fontSize: 18, // General/18
-    lineHeight: 23, // General/23 - Tighter for editorial feel
+    lineHeight: 24, // General/24 - Tighter for editorial feel
     letterSpacing: -0.1, // Kerning/[0-1] - Loosened a bit for Apercu
     fontWeight: 400, // Weight/400 - Regular for readability
     fontStyle: "Regular"
@@ -987,7 +987,7 @@ const APERCU_PRO_TYPOGRAPHY_SCALE: TypographyScale = {
   // Label fonts - Editorial UI emphasis (loosened a bit)
   label18: {
     fontSize: 18, // General/18
-    lineHeight: 23, // General/23 - Same as body18
+    lineHeight: 24, // General/24 - Same as body18
     letterSpacing: -0.1, // Kerning/[0-1] - Loosened a bit for Apercu
     fontWeight: 600, // Weight/600 - SemiBold for UI emphasis
     fontStyle: "Semi Bold"
@@ -1286,7 +1286,7 @@ async function createTextStyles(versionNumber: string): Promise<void> {
   
   // Create text styles with variable bindings
   for (const [scaleName, style] of Object.entries(currentScale)) {
-    const styleName = `SCS Font System/${scaleName}`;
+    const styleName = `${fontCollection.name}/${scaleName}`;
     
     // Determine font style based on weight
     let currentFontStyle = "Regular";
@@ -1307,10 +1307,10 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     }
     
     // Find the typography variables for this scale
-    const fontSizeVar = allVariables.find(v => v && v.name === `${styleName}/font-size`);
-    const lineHeightVar = allVariables.find(v => v && v.name === `${styleName}/line-height`);
-    const letterSpacingVar = allVariables.find(v => v && v.name === `${styleName}/letter-spacing`);
-    const fontWeightVar = allVariables.find(v => v && v.name === `${styleName}/font-weight`);
+    const fontSizeVar = allVariables.find(v => v && v.name === `${scaleName}/font-size`);
+    const lineHeightVar = allVariables.find(v => v && v.name === `${scaleName}/line-height`);
+    const letterSpacingVar = allVariables.find(v => v && v.name === `${scaleName}/letter-spacing`);
+    const fontWeightVar = allVariables.find(v => v && v.name === `${scaleName}/font-weight`);
     
     // Create the text style first
     const textStyle = figma.createTextStyle();
@@ -1331,7 +1331,7 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     }
     
     // Find the font family variable
-    const fontFamilyVar = allVariables.find(v => v && v.name === "Font Family/Primary");
+    const fontFamilyVar = allVariables.find(v => v && v.name === "Font Family");
     if (fontFamilyVar) {
       textStyle.setBoundVariable("fontFamily", fontFamilyVar);
       console.log(`Bound fontFamily to variable: ${fontFamilyVar.name}`);
@@ -1412,11 +1412,11 @@ async function createFontSystem(versionNumber: string): Promise<void> {
   const apercuProModeId = fontCollection.addMode("Apercu Pro");
   
   // Create font family variables for all modes
-  await createStringVariable(fontCollection, interMode.modeId, "Font Family/Primary", "Inter");
-  await createStringVariable(fontCollection, gtStandardModeId, "Font Family/Primary", "GT Standard");
-  await createStringVariable(fontCollection, sfProModeId, "Font Family/Primary", "SF Pro");
-  // await createStringVariable(fontCollection, sfRoundedModeId, "Font Family/Primary", "SF Pro Rounded");
-  await createStringVariable(fontCollection, apercuProModeId, "Font Family/Primary", "Apercu Pro Var");
+  await createStringVariable(fontCollection, interMode.modeId, "Font Family", "Inter");
+  await createStringVariable(fontCollection, gtStandardModeId, "Font Family", "GT Standard");
+  await createStringVariable(fontCollection, sfProModeId, "Font Family", "SF Pro");
+  // await createStringVariable(fontCollection, sfRoundedModeId, "Font Family", "SF Pro Rounded");
+  await createStringVariable(fontCollection, apercuProModeId, "Font Family", "Apercu Pro Var");
   
   // Create typography scale variables that reference spacing tokens for all modes
   const modes = [
@@ -1429,7 +1429,7 @@ async function createFontSystem(versionNumber: string): Promise<void> {
   
   for (const mode of modes) {
     for (const [scaleName, style] of Object.entries(mode.scale)) {
-    const baseName = `SCS Font System/${scaleName}`;
+    const baseName = scaleName;
     
     // Font size - reference General spacing token
     const fontSizeVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "General", style.fontSize);
