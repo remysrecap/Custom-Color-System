@@ -1429,38 +1429,38 @@ async function createFontSystem(versionNumber: string): Promise<void> {
   
   for (const mode of modes) {
     for (const [scaleName, style] of Object.entries(mode.scale)) {
-      const baseName = `SCS Font System/${scaleName}`;
-      
-      // Font size - reference General spacing token
-      const fontSizeVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "General", style.fontSize);
-      if (fontSizeVarId) {
-        await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/font-size`, fontSizeVarId);
-      } else {
-        await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-size`, style.fontSize);
-      }
-      
-      // Line height - reference General spacing token
-      const lineHeightVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "General", style.lineHeight);
-      if (lineHeightVarId) {
-        await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/line-height`, lineHeightVarId);
-      } else {
-        await createFontVariable(fontCollection, mode.modeId, `${baseName}/line-height`, style.lineHeight);
-      }
-      
-      // Letter spacing - reference Kerning token
-      const letterSpacingVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "Kerning", style.letterSpacing);
-      if (letterSpacingVarId) {
-        await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/letter-spacing`, letterSpacingVarId);
-      } else {
-        await createFontVariable(fontCollection, mode.modeId, `${baseName}/letter-spacing`, style.letterSpacing);
-      }
-      
-      // Font weight - reference Weight token
-      const fontWeightVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "Weight", style.fontWeight);
-      if (fontWeightVarId) {
-        await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/font-weight`, fontWeightVarId);
-      } else {
-        await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-weight`, style.fontWeight);
+    const baseName = `SCS Font System/${scaleName}`;
+    
+    // Font size - reference General spacing token
+    const fontSizeVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "General", style.fontSize);
+    if (fontSizeVarId) {
+      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/font-size`, fontSizeVarId);
+    } else {
+      await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-size`, style.fontSize);
+    }
+    
+    // Line height - reference General spacing token
+    const lineHeightVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "General", style.lineHeight);
+    if (lineHeightVarId) {
+      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/line-height`, lineHeightVarId);
+    } else {
+      await createFontVariable(fontCollection, mode.modeId, `${baseName}/line-height`, style.lineHeight);
+    }
+    
+    // Letter spacing - reference Kerning token
+    const letterSpacingVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "Kerning", style.letterSpacing);
+    if (letterSpacingVarId) {
+      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/letter-spacing`, letterSpacingVarId);
+    } else {
+      await createFontVariable(fontCollection, mode.modeId, `${baseName}/letter-spacing`, style.letterSpacing);
+    }
+    
+    // Font weight - reference Weight token
+    const fontWeightVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "Weight", style.fontWeight);
+    if (fontWeightVarId) {
+      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/font-weight`, fontWeightVarId);
+    } else {
+      await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-weight`, style.fontWeight);
       }
     }
   }
@@ -2644,10 +2644,10 @@ async function exportDemoComponents(collection: VariableCollection, semanticColl
   try {
     // Load required fonts with error handling
     try {
-      await Promise.all([
+    await Promise.all([
         loadFontWithFallback(getCurrentFontFamily(), "Regular"),
         loadFontWithFallback(getCurrentFontFamily(), "Medium")
-      ]);
+    ]);
     } catch (error) {
       console.warn("Failed to load some fonts, continuing with available fonts:", error);
     }
@@ -3408,7 +3408,7 @@ async function exportDocumentation(collection: VariableCollection, semanticColle
   try {
     // Load required fonts with error handling
     try {
-      await Promise.all([
+    await Promise.all([
         loadFontWithFallback(getCurrentFontFamily(), "Regular"),
         loadFontWithFallback(getCurrentFontFamily(), "Medium"),
         loadFontWithFallback(getCurrentFontFamily(), "Bold")
