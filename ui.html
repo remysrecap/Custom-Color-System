@@ -848,16 +848,18 @@
         </div>
     </div>
 
-    <!-- Font System Toggle -->
-    <div class="input-row settings-toggle-row">
-        <div class="label">Font System</div>
+    <!-- Font Family Selection -->
+    <div class="input-row">
+        <div class="label">Font</div>
         <div class="input-container">
-            <div class="right-aligned-content">
-                <label class="toggle-switch">
-                    <input type="checkbox" id="includeFontSystem">
-                    <span class="toggle-slider"></span>
-                </label>
-            </div>
+            <select id="fontFamilySelect" class="select-input">
+                <option value="none">None</option>
+                <option value="inter">Inter</option>
+                <option value="gtStandard">GT Standard</option>
+                <option value="sfPro">SF Pro</option>
+                <option value="sfRounded">SF Pro Rounded</option>
+                <option value="apercuPro">Apercu Pro Var</option>
+            </select>
         </div>
         <div class="info-button">
             <svg viewBox="0 0 12 12" fill="none">
@@ -865,13 +867,12 @@
             </svg>
             <div class="tooltip">
                 <strong>Font System includes:</strong><br><br>
-                • <strong>Font Family:</strong> GT Standard (with Inter fallback)<br>
-                • <strong>Typography Scale:</strong> Hero, Header, Section, Subtitle, Body/Button, Caption, Badge<br>
-                • <strong>Figma Text Styles:</strong> 8 ready-to-use text styles in your design file<br>
+                • <strong>Typography Scale:</strong> Display, Headline, Body, Label, Overline<br>
+                • <strong>Figma Text Styles:</strong> Ready-to-use text styles in your design file<br>
                 • <strong>Font Properties:</strong> Size, line height, letter spacing, font weight<br>
                 • <strong>Design Tokens:</strong> Organized variables for consistent typography<br>
                 • <strong>Integration:</strong> Works alongside your color system<br><br>
-                Creates a complete typography system with 8 Figma text styles and GT Standard font family, following modern design system principles.
+                Creates a complete typography system with Figma text styles and the selected font family, following modern design system principles.
             </div>
         </div>
     </div>
@@ -1167,7 +1168,7 @@
         includePrimitives: document.getElementById('includePrimitives').checked,
         exportDemo: document.getElementById('exportDemo').checked,
         exportDocumentation: document.getElementById('exportDocumentation').checked,
-        includeFontSystem: document.getElementById('includeFontSystem').checked
+        fontFamily: document.getElementById('fontFamilySelect').value
     };
 
     console.log('Sending message to plugin:', data);

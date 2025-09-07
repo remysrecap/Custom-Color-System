@@ -53,8 +53,7 @@ interface PluginMessage {
   includePrimitives?: boolean;
   exportDemo?: boolean;
   exportDocumentation?: boolean;
-  includeFontSystem?: boolean;  // Add font system option
-  fontMode?: "inter" | "gtStandard" | "sfPro" | "sfRounded" | "apercuPro";  // Font mode selection
+  fontFamily?: "none" | "inter" | "gtStandard" | "sfPro" | "sfRounded" | "apercuPro";  // Font family selection
 }
 
 // ===============================================
@@ -147,6 +146,24 @@ let currentFontMode: FontMode = FONT_MODES.inter;
 function setFontMode(mode: keyof typeof FONT_MODES): void {
   currentFontMode = FONT_MODES[mode];
   console.log(`Font mode switched to: ${currentFontMode.displayName}`);
+}
+
+// Function to get font display name
+function getFontDisplayName(fontFamily: string): string {
+  switch (fontFamily) {
+    case "inter":
+      return "Inter";
+    case "gtStandard":
+      return "GT Standard";
+    case "sfPro":
+      return "SF Pro";
+    case "sfRounded":
+      return "SF Pro Rounded";
+    case "apercuPro":
+      return "Apercu Pro Var";
+    default:
+      return "Inter";
+  }
 }
 
 // Function to update existing text nodes to use the current font mode
@@ -358,6 +375,17 @@ function getCurrentFontFamily(): string {
   return currentFontMode.family;
 }
 
+// Function to debug available font styles
+async function debugAvailableFontStyles(fontFamily: string): Promise<void> {
+  try {
+    const availableFonts = await figma.listAvailableFontsAsync();
+    const familyFonts = availableFonts.filter(font => font.fontName.family === fontFamily);
+    console.log(`Available styles for ${fontFamily}:`, familyFonts.map(f => f.fontName.style));
+  } catch (error) {
+    console.log(`Could not list fonts for ${fontFamily}:`, error);
+  }
+}
+
 // Function to safely load font with fallback
 async function loadFontWithFallback(fontFamily: string, style: string): Promise<{ family: string; style: string }> {
   try {
@@ -384,15 +412,20 @@ async function loadFontWithFallback(fontFamily: string, style: string): Promise<
         throw new Error("GT Standard M style not found");
       }
     } else if (fontFamily === "SF Pro" || fontFamily === "SF Pro Rounded" || fontFamily === "Apercu Pro Var") {
-      // For SF Pro, SF Pro Rounded, and Apercu Pro, try to load with the exact style
-      // If that fails, try common variations
-      const styleVariations = [
-        style,
-        style.replace("Semi Bold", "Semibold"),
-        style.replace("Semibold", "Semi Bold"),
-        style.replace("Regular", "Normal"),
-        style.replace("Normal", "Regular")
-      ];
+      // Debug available styles for problematic fonts
+      await debugAvailableFontStyles(fontFamily);
+      
+      // For SF Pro, SF Pro Rounded, and Apercu Pro, try comprehensive style variations
+      const styleVariations = [];
+      if (style === "Semi Bold" || style === "Semibold") {
+        styleVariations.push("Semibold", "Semi Bold", "SemiBold", "Semi-Bold", "Medium", "Regular");
+      } else if (style === "Bold") {
+        styleVariations.push("Bold", "Bold Regular", "Regular");
+      } else if (style === "Medium") {
+        styleVariations.push("Medium", "Semibold", "Regular");
+      } else {
+        styleVariations.push(style, "Regular", "Normal");
+      }
       
       for (const variation of styleVariations) {
         try {
@@ -413,14 +446,34 @@ async function loadFontWithFallback(fontFamily: string, style: string): Promise<
       return { family: fontFamily, style: style };
     }
   } catch (error) {
-    console.warn(`⚠️ Failed to load font ${fontFamily} ${style}, falling back to ${currentFontMode.fallback} ${style}`);
-    try {
-      await figma.loadFontAsync({ family: currentFontMode.fallback, style: style });
-      return { family: currentFontMode.fallback, style: style };
-    } catch (fallbackError) {
-      console.error(`❌ Failed to load fallback font ${currentFontMode.fallback} ${style}:`, fallbackError);
-      throw fallbackError;
+    console.warn(`⚠️ Failed to load font ${fontFamily} ${style}, trying fallback fonts`);
+    
+    // Try common fallback fonts in order of preference
+    const fallbackFonts = ["Inter", "Arial", "Helvetica", "sans-serif"];
+    
+    for (const fallbackFont of fallbackFonts) {
+      try {
+        await figma.loadFontAsync({ family: fallbackFont, style: style });
+        console.log(`✅ Successfully loaded fallback font: ${fallbackFont} ${style}`);
+        return { family: fallbackFont, style: style };
+      } catch (fallbackError) {
+        continue;
+      }
     }
+    
+    // If all fallbacks fail, try with "Regular" style
+    for (const fallbackFont of fallbackFonts) {
+      try {
+        await figma.loadFontAsync({ family: fallbackFont, style: "Regular" });
+        console.log(`✅ Successfully loaded fallback font: ${fallbackFont} Regular`);
+        return { family: fallbackFont, style: "Regular" };
+      } catch (fallbackError) {
+        continue;
+      }
+    }
+    
+    console.error(`❌ Failed to load any fallback font for ${fontFamily} ${style}`);
+    throw new Error(`Unable to load font ${fontFamily} ${style} or any fallback`);
   }
 }
 
@@ -1032,15 +1085,27 @@ const APERCU_PRO_TYPOGRAPHY_SCALE: TypographyScale = {
 };
 
 // Helper function to apply text styles from the font system
-async function applyTextStyle(textNode: TextNode, styleName: string): Promise<void> {
+async function applyTextStyle(textNode: TextNode, styleName: string, fontFamily: string | null = null): Promise<void> {
   try {
-    // Find the text style by name
+    // Find the text style by name - look for the actual font collection name
     const textStyles = await figma.getLocalTextStylesAsync();
-    const fullStyleName = `SCS Font System/${styleName}`;
+    
+    // Find the font collection to get the correct name
+    const collections = await figma.variables.getLocalVariableCollectionsAsync();
+    const fontCollection = collections.find(c => c.name.startsWith("SCS Font"));
+    
+    if (!fontCollection) {
+      console.log("No font collection found, applying fallback styles");
+      await applyFallbackTextStyle(textNode, styleName, fontFamily);
+      return;
+    }
+    
+    const fullStyleName = `${fontCollection.name}/${styleName}`;
     const textStyle = textStyles.find(style => style.name === fullStyleName);
     
     console.log(`Looking for text style: ${fullStyleName}`);
     console.log(`Available text styles:`, textStyles.map(s => s.name));
+    console.log(`Font collection found: ${fontCollection.name}`);
     
     if (textStyle) {
       // Load the font family and style needed for the text style
@@ -1052,36 +1117,38 @@ async function applyTextStyle(textNode: TextNode, styleName: string): Promise<vo
         console.log(`✅ Applied text style: ${styleName} to text node`);
       } catch (fontError) {
         console.warn(`Failed to load font for text style ${styleName}, applying fallback:`, fontError);
-        await applyFallbackTextStyle(textNode, styleName);
+        await applyFallbackTextStyle(textNode, styleName, fontFamily);
       }
     } else {
       console.warn(`⚠️ Text style not found: ${fullStyleName}, applying fallback styles`);
       // Apply fallback styles based on the style name
-      await applyFallbackTextStyle(textNode, styleName);
+      await applyFallbackTextStyle(textNode, styleName, fontFamily);
     }
   } catch (error) {
     console.error(`❌ Error applying text style ${styleName}:`, error);
     // Apply fallback styles on error
-    await applyFallbackTextStyle(textNode, styleName);
+    await applyFallbackTextStyle(textNode, styleName, fontFamily);
   }
 }
 
 // Helper function to apply fallback text styles when text styles don't exist
-async function applyFallbackTextStyle(textNode: TextNode, styleName: string): Promise<void> {
+async function applyFallbackTextStyle(textNode: TextNode, styleName: string, fontFamily: string | null = null): Promise<void> {
   try {
-    // Get the appropriate typography scale based on current font mode
+    // Get the appropriate typography scale based on font family
     let currentScale: TypographyScale;
-    switch (currentFontMode.family) {
-      case "GT Standard":
+    const fontFamilyName = fontFamily ? getFontDisplayName(fontFamily) : "Inter";
+    
+    switch (fontFamily) {
+      case "gtStandard":
         currentScale = GT_STANDARD_TYPOGRAPHY_SCALE;
         break;
-      case "SF Pro":
+      case "sfPro":
         currentScale = SF_PRO_TYPOGRAPHY_SCALE;
         break;
-      case "SF Pro Rounded":
+      case "sfRounded":
         currentScale = SF_ROUNDED_TYPOGRAPHY_SCALE;
         break;
-      case "Apercu Pro Var":
+      case "apercuPro":
         currentScale = APERCU_PRO_TYPOGRAPHY_SCALE;
         break;
       default:
@@ -1091,18 +1158,18 @@ async function applyFallbackTextStyle(textNode: TextNode, styleName: string): Pr
     const typographyStyle = currentScale[styleName as keyof TypographyScale];
     
     if (typographyStyle) {
-      // Determine font style based on weight
+      // Determine font style based on weight with better mapping
       let fontStyle = "Regular";
       if (typographyStyle.fontWeight >= 700) {
         fontStyle = "Bold";
       } else if (typographyStyle.fontWeight >= 600) {
-        fontStyle = "Semi Bold";
+        fontStyle = "Semibold"; // Use Semibold instead of Semi Bold
       } else if (typographyStyle.fontWeight >= 500) {
         fontStyle = "Medium";
       }
       
       // Load the current font with fallback
-      const loadedFont = await loadFontWithFallback(getCurrentFontFamily(), fontStyle);
+      const loadedFont = await loadFontWithFallback(fontFamilyName, fontStyle);
       
       // Apply font properties directly
       textNode.fontSize = typographyStyle.fontSize;
@@ -1234,8 +1301,8 @@ async function createSpacingCollection(versionNumber: string): Promise<VariableC
 }
 
 // Function to create Figma text styles that bind to typography variables
-async function createTextStyles(versionNumber: string): Promise<void> {
-  console.log(`Creating Figma text styles with variable bindings`);
+async function createTextStyles(versionNumber: string, selectedFontFamily: string): Promise<void> {
+  console.log(`Creating Figma text styles with variable bindings for font: ${selectedFontFamily}`);
   
   // Get the font system collection to bind variables
   const collections = await figma.variables.getLocalVariableCollectionsAsync();
@@ -1251,9 +1318,9 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     fontCollection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
   );
   
-  // Use the current font mode
-  const fontFamily = getCurrentFontFamily();
-  console.log(`Using current font family: ${fontFamily}`);
+  // Use the selected font family
+  const fontFamily = getFontDisplayName(selectedFontFamily);
+  console.log(`Using selected font family: ${fontFamily}`);
   
   // Try to load the font family
   try {
@@ -1264,19 +1331,19 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     await figma.loadFontAsync({ family: "Inter", style: "Regular" });
   }
   
-  // Get the appropriate typography scale based on current font mode
+  // Get the appropriate typography scale based on selected font family
   let currentScale: TypographyScale;
-  switch (currentFontMode.family) {
-    case "GT Standard":
+  switch (selectedFontFamily) {
+    case "gtStandard":
       currentScale = GT_STANDARD_TYPOGRAPHY_SCALE;
       break;
-    case "SF Pro":
+    case "sfPro":
       currentScale = SF_PRO_TYPOGRAPHY_SCALE;
       break;
-    case "SF Pro Rounded":
+    case "sfRounded":
       currentScale = SF_ROUNDED_TYPOGRAPHY_SCALE;
       break;
-    case "Apercu Pro Var":
+    case "apercuPro":
       currentScale = APERCU_PRO_TYPOGRAPHY_SCALE;
       break;
     default:
@@ -1284,26 +1351,57 @@ async function createTextStyles(versionNumber: string): Promise<void> {
       break;
   }
   
+  // Debug available font styles for the selected font
+  await debugAvailableFontStyles(fontFamily);
+  
   // Create text styles with variable bindings
   for (const [scaleName, style] of Object.entries(currentScale)) {
     const styleName = `${fontCollection.name}/${scaleName}`;
     
-    // Determine font style based on weight
+    // Determine font style based on weight with better mapping
     let currentFontStyle = "Regular";
     if (style.fontWeight >= 700) {
       currentFontStyle = "Bold";
     } else if (style.fontWeight >= 600) {
-      currentFontStyle = "Semi Bold";
+      // Try different variations of Semi Bold
+      currentFontStyle = "Semibold"; // Most fonts use this format
     } else if (style.fontWeight >= 500) {
       currentFontStyle = "Medium";
     }
     
-    // Try to load the specific font style
-    try {
-      await figma.loadFontAsync({ family: fontFamily, style: currentFontStyle });
-    } catch (error) {
-      console.log(`${fontFamily} ${currentFontStyle} not available, using Regular`);
-      currentFontStyle = "Regular";
+    // Try to load the specific font style with comprehensive fallback
+    let loadedFont = { family: fontFamily, style: currentFontStyle };
+    
+    // Define style variations to try in order of preference
+    const styleVariations = [];
+    if (currentFontStyle === "Semibold") {
+      styleVariations.push("Semibold", "Semi Bold", "SemiBold", "Semi-Bold", "Medium", "Regular");
+    } else if (currentFontStyle === "Bold") {
+      styleVariations.push("Bold", "Bold Regular", "Regular");
+    } else if (currentFontStyle === "Medium") {
+      styleVariations.push("Medium", "Semibold", "Regular");
+    } else {
+      styleVariations.push("Regular", "Normal");
+    }
+    
+    let fontLoaded = false;
+    for (const styleVariation of styleVariations) {
+      try {
+        await figma.loadFontAsync({ family: fontFamily, style: styleVariation });
+        loadedFont = { family: fontFamily, style: styleVariation };
+        console.log(`Successfully loaded ${fontFamily} ${styleVariation}`);
+        fontLoaded = true;
+        break;
+      } catch (error) {
+        continue;
+      }
+    }
+    
+    if (!fontLoaded) {
+      console.log(`${fontFamily} not available, falling back to Inter Regular`);
+      await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+      loadedFont = { family: "Inter", style: "Regular" };
+      console.log(`Successfully loaded Inter Regular as final fallback`);
     }
     
     // Find the typography variables for this scale
@@ -1315,7 +1413,7 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     // Create the text style first
     const textStyle = figma.createTextStyle();
     textStyle.name = styleName;
-    textStyle.fontName = { family: fontFamily, style: currentFontStyle };
+    textStyle.fontName = loadedFont;
     
     // Set initial values (fallback)
     textStyle.fontSize = style.fontSize;
@@ -1360,6 +1458,7 @@ async function createTextStyles(versionNumber: string): Promise<void> {
     console.log(`Text style ${styleName} bound to variables successfully`);
     
     console.log(`Created text style: ${styleName} with ${fontFamily} ${currentFontStyle}`);
+    console.log(`Text style name: ${styleName}`);
   }
   
   console.log(`Text styles created successfully with variable bindings`);
@@ -1389,83 +1488,77 @@ async function findSpacingVariableByValue(collectionName: string, groupName: str
 }
 
 // Font system creation function
-async function createFontSystem(versionNumber: string): Promise<void> {
-  console.log(`Creating font system with version: ${versionNumber}`);
+async function createFontSystem(versionNumber: string, selectedFontFamily: string): Promise<void> {
+  console.log(`Creating font system with version: ${versionNumber} for font: ${selectedFontFamily}`);
   
-  // Create font system collection with multiple modes
+  // Create font system collection with single mode for selected font
   const fontCollection = figma.variables.createVariableCollection(`SCS Font ${versionNumber}`);
   
-  // Create Inter mode
-  const interMode = fontCollection.modes[0];
-  fontCollection.renameMode(interMode.modeId, "Inter");
+  // Get the default mode and rename it to the selected font family
+  const defaultMode = fontCollection.modes[0];
+  const fontDisplayName = getFontDisplayName(selectedFontFamily);
+  fontCollection.renameMode(defaultMode.modeId, fontDisplayName);
   
-  // Create GT Standard mode
-  const gtStandardModeId = fontCollection.addMode("GT Standard");
+  // Create font family variable for the selected font
+  await createStringVariable(fontCollection, defaultMode.modeId, "Font Family", fontDisplayName);
   
-  // Create SF Pro mode
-  const sfProModeId = fontCollection.addMode("SF Pro");
+  // Get the appropriate typography scale for the selected font
+  let typographyScale: TypographyScale;
+  switch (selectedFontFamily) {
+    case "gtStandard":
+      typographyScale = GT_STANDARD_TYPOGRAPHY_SCALE;
+      break;
+    case "sfPro":
+      typographyScale = SF_PRO_TYPOGRAPHY_SCALE;
+      break;
+    case "sfRounded":
+      typographyScale = SF_ROUNDED_TYPOGRAPHY_SCALE;
+      break;
+    case "apercuPro":
+      typographyScale = APERCU_PRO_TYPOGRAPHY_SCALE;
+      break;
+    default:
+      typographyScale = TYPOGRAPHY_SCALE; // Inter
+  }
   
-  // Create SF Pro Rounded mode (commented out due to 4-mode limit)
-  // const sfRoundedModeId = fontCollection.addMode("SF Pro Rounded");
-  
-  // Create Apercu Pro mode
-  const apercuProModeId = fontCollection.addMode("Apercu Pro");
-  
-  // Create font family variables for all modes
-  await createStringVariable(fontCollection, interMode.modeId, "Font Family", "Inter");
-  await createStringVariable(fontCollection, gtStandardModeId, "Font Family", "GT Standard");
-  await createStringVariable(fontCollection, sfProModeId, "Font Family", "SF Pro");
-  // await createStringVariable(fontCollection, sfRoundedModeId, "Font Family", "SF Pro Rounded");
-  await createStringVariable(fontCollection, apercuProModeId, "Font Family", "Apercu Pro Var");
-  
-  // Create typography scale variables that reference spacing tokens for all modes
-  const modes = [
-    { modeId: interMode.modeId, name: "Inter", scale: TYPOGRAPHY_SCALE },
-    { modeId: gtStandardModeId, name: "GT Standard", scale: GT_STANDARD_TYPOGRAPHY_SCALE },
-    { modeId: sfProModeId, name: "SF Pro", scale: SF_PRO_TYPOGRAPHY_SCALE },
-    // { modeId: sfRoundedModeId, name: "SF Pro Rounded", scale: SF_ROUNDED_TYPOGRAPHY_SCALE },
-    { modeId: apercuProModeId, name: "Apercu Pro Var", scale: APERCU_PRO_TYPOGRAPHY_SCALE }
-  ];
-  
-  for (const mode of modes) {
-    for (const [scaleName, style] of Object.entries(mode.scale)) {
+  // Create typography scale variables that reference spacing tokens
+  for (const [scaleName, style] of Object.entries(typographyScale)) {
     const baseName = scaleName;
     
     // Font size - reference General spacing token
     const fontSizeVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "General", style.fontSize);
     if (fontSizeVarId) {
-      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/font-size`, fontSizeVarId);
+      await createFontVariableReference(fontCollection, defaultMode.modeId, `${baseName}/font-size`, fontSizeVarId);
     } else {
-      await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-size`, style.fontSize);
+      await createFontVariable(fontCollection, defaultMode.modeId, `${baseName}/font-size`, style.fontSize);
     }
     
     // Line height - reference General spacing token
     const lineHeightVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "General", style.lineHeight);
     if (lineHeightVarId) {
-      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/line-height`, lineHeightVarId);
+      await createFontVariableReference(fontCollection, defaultMode.modeId, `${baseName}/line-height`, lineHeightVarId);
     } else {
-      await createFontVariable(fontCollection, mode.modeId, `${baseName}/line-height`, style.lineHeight);
+      await createFontVariable(fontCollection, defaultMode.modeId, `${baseName}/line-height`, style.lineHeight);
     }
     
     // Letter spacing - reference Kerning token
     const letterSpacingVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "Kerning", style.letterSpacing);
     if (letterSpacingVarId) {
-      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/letter-spacing`, letterSpacingVarId);
+      await createFontVariableReference(fontCollection, defaultMode.modeId, `${baseName}/letter-spacing`, letterSpacingVarId);
     } else {
-      await createFontVariable(fontCollection, mode.modeId, `${baseName}/letter-spacing`, style.letterSpacing);
+      await createFontVariable(fontCollection, defaultMode.modeId, `${baseName}/letter-spacing`, style.letterSpacing);
     }
     
     // Font weight - reference Weight token
     const fontWeightVarId = await findSpacingVariableByValue(`SCS Spacing ${versionNumber}`, "Weight", style.fontWeight);
     if (fontWeightVarId) {
-      await createFontVariableReference(fontCollection, mode.modeId, `${baseName}/font-weight`, fontWeightVarId);
+      await createFontVariableReference(fontCollection, defaultMode.modeId, `${baseName}/font-weight`, fontWeightVarId);
     } else {
-      await createFontVariable(fontCollection, mode.modeId, `${baseName}/font-weight`, style.fontWeight);
-      }
+      await createFontVariable(fontCollection, defaultMode.modeId, `${baseName}/font-weight`, style.fontWeight);
     }
   }
   
-  console.log(`Font system variables created successfully`);
+  console.log(`Font system variables created successfully for ${fontDisplayName}`);
 }
 
 // Utility function to convert hex colors to RGB format for Figma
@@ -1916,9 +2009,9 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
   }
   
   if (msg.type === "update-font-mode") {
-    const { fontMode } = msg;
-    if (fontMode) {
-      setFontMode(fontMode);
+    const { fontFamily } = msg;
+    if (fontFamily && fontFamily !== "none") {
+      setFontMode(fontFamily as keyof typeof FONT_MODES);
       await updateExistingTextNodes();
     }
     return;
@@ -1939,8 +2032,7 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
       includePrimitives = true, 
       exportDemo = false, 
       exportDocumentation: shouldExportDocumentation = false, 
-      includeFontSystem = false, 
-      fontMode 
+      fontFamily = "none" 
     } = msg;
     try {
       // Clear the hex values map at the start of each run to ensure fresh values
@@ -1952,8 +2044,8 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
       console.log("Next version number:", versionNumber);
       
       // Set font mode if specified
-      if (fontMode) {
-        setFontMode(fontMode);
+      if (fontFamily && fontFamily !== "none") {
+        setFontMode(fontFamily as keyof typeof FONT_MODES);
       }
       
       const lightBrandTheme: RadixTheme = generateRadixColors({
@@ -2052,28 +2144,38 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
 
         await createSemanticVariables(semanticCollection, primitiveCollection, appearance);
 
-        // Create font system if enabled
-        if (includeFontSystem) {
+        // Create font system if a font family is selected
+        if (fontFamily && fontFamily !== "none") {
           await createSpacingCollection(versionNumber);
-          await createFontSystem(versionNumber);
+          await createFontSystem(versionNumber, fontFamily);
           // Create text styles after all variables are set up
-          await createTextStyles(versionNumber);
-          // Small delay to ensure text styles are fully created
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await createTextStyles(versionNumber, fontFamily);
+          // Longer delay to ensure text styles are fully created and available
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
 
         // Create demo components if enabled
         if (exportDemo) {
           console.log("Creating demo components...");
-          await exportDemoComponents(primitiveCollection, semanticCollection);
-          console.log("Demo components created successfully");
+          try {
+            await exportDemoComponents(primitiveCollection, semanticCollection, fontFamily);
+            console.log("Demo components created successfully");
+          } catch (error) {
+            console.error("Failed to create demo components:", error);
+            figma.notify("Demo components creation failed, but other features completed successfully", { error: true });
+          }
         }
 
         // Create documentation if enabled
         if (shouldExportDocumentation) {
           console.log("Creating documentation...");
-          await exportDocumentation(primitiveCollection, semanticCollection);
-          console.log("Documentation created successfully");
+          try {
+            await exportDocumentation(primitiveCollection, semanticCollection, fontFamily);
+            console.log("Documentation created successfully");
+          } catch (error) {
+            console.error("Failed to create documentation:", error);
+            figma.notify("Documentation creation failed, but other features completed successfully", { error: true });
+          }
         }
       } else {
         collection = figma.variables.createVariableCollection(`SCS Color ${versionNumber}`);
@@ -2092,33 +2194,33 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
             darkNeutralTheme, darkSuccessTheme, darkErrorTheme);
         }
 
-        // Create font system if enabled
-        if (includeFontSystem) {
+        // Create font system if a font family is selected
+        if (fontFamily && fontFamily !== "none") {
           await createSpacingCollection(versionNumber);
-          await createFontSystem(versionNumber);
+          await createFontSystem(versionNumber, fontFamily);
           // Create text styles after all variables are set up
-          await createTextStyles(versionNumber);
-          // Small delay to ensure text styles are fully created
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await createTextStyles(versionNumber, fontFamily);
+          // Longer delay to ensure text styles are fully created and available
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
 
         // Create demo components if enabled
         if (exportDemo) {
           console.log("Creating demo components...");
-          await exportDemoComponents(collection);
+          await exportDemoComponents(collection, null, fontFamily);
           console.log("Demo components created successfully");
         }
 
         // Create documentation if enabled
         if (shouldExportDocumentation) {
           console.log("Creating documentation...");
-          await exportDocumentation(collection);
+          await exportDocumentation(collection, null, fontFamily);
           console.log("Documentation created successfully");
         }
       }
 
       if (!isClosing) {
-        const fontSystemMessage = includeFontSystem ? " with font system" : "";
+        const fontSystemMessage = (fontFamily && fontFamily !== "none") ? " with font system" : "";
         figma.notify(`Successfully created color system${fontSystemMessage} with version ${versionNumber}`);
         figma.ui.postMessage('complete');
       }
@@ -2639,14 +2741,15 @@ async function applyVariableWithFallback(
 
 
 // Main Entry Point
-async function exportDemoComponents(collection: VariableCollection, semanticCollection: VariableCollection | null = null) {
+async function exportDemoComponents(collection: VariableCollection, semanticCollection: VariableCollection | null = null, fontFamily: string | null = null) {
   console.log("exportDemoComponents called with collection:", collection.name);
   try {
     // Load required fonts with error handling
+    const fontFamilyName = fontFamily ? getFontDisplayName(fontFamily) : "Inter";
     try {
     await Promise.all([
-        loadFontWithFallback(getCurrentFontFamily(), "Regular"),
-        loadFontWithFallback(getCurrentFontFamily(), "Medium")
+        loadFontWithFallback(fontFamilyName, "Regular"),
+        loadFontWithFallback(fontFamilyName, "Medium")
     ]);
     } catch (error) {
       console.warn("Failed to load some fonts, continuing with available fonts:", error);
@@ -2665,17 +2768,36 @@ async function exportDemoComponents(collection: VariableCollection, semanticColl
     frame.paddingRight = 0; // Remove right padding
     frame.paddingTop = 0; // Remove top padding
     frame.paddingBottom = 0; // Remove bottom padding
-    frame.layoutAlign = "CENTER"; // Center the frame
+    frame.layoutAlign = "STRETCH"; // Stretch the frame
     frame.counterAxisAlignItems = "CENTER"; // Center children
     
     // Position frame on canvas (above the documentation frame)
     frame.x = 100;
     frame.y = 100;
 
-    // Create three main columns
-      const leftColumn = await createFixedWidthFrame(await createFeaturedCard(semanticCollection || collection), "surface/sf-neutral-primary", semanticCollection || collection);
-  const middleColumn = await createFixedWidthFrame(await createProductList(semanticCollection || collection), "surface/sf-neutral-secondary", semanticCollection || collection);
-  const rightColumn = await createFixedWidthFrame(await createNotifications(semanticCollection || collection), "surface/sf-neutral-primary", semanticCollection || collection);
+    // Create three main columns with error handling
+    let leftColumn, middleColumn, rightColumn;
+    
+    try {
+      leftColumn = await createFixedWidthFrame(await createFeaturedCard(semanticCollection || collection, fontFamily), "surface/sf-neutral-primary", semanticCollection || collection);
+    } catch (error) {
+      console.error("Failed to create featured card:", error);
+      leftColumn = await createFallbackColumn("Featured Card", "surface/sf-neutral-primary", semanticCollection || collection);
+    }
+    
+    try {
+      middleColumn = await createFixedWidthFrame(await createProductList(semanticCollection || collection, fontFamily), "surface/sf-neutral-secondary", semanticCollection || collection);
+    } catch (error) {
+      console.error("Failed to create product list:", error);
+      middleColumn = await createFallbackColumn("Product List", "surface/sf-neutral-secondary", semanticCollection || collection);
+    }
+    
+    try {
+      rightColumn = await createFixedWidthFrame(await createNotifications(semanticCollection || collection, fontFamily), "surface/sf-neutral-primary", semanticCollection || collection);
+    } catch (error) {
+      console.error("Failed to create notifications:", error);
+      rightColumn = await createFallbackColumn("Notifications", "surface/sf-neutral-primary", semanticCollection || collection);
+    }
 
     // Add columns to frame
     frame.appendChild(leftColumn);
@@ -2688,6 +2810,48 @@ async function exportDemoComponents(collection: VariableCollection, semanticColl
     figma.notify('Error creating demo components');
     throw error;
   }
+}
+
+// Fallback function to create a simple column when component creation fails
+async function createFallbackColumn(title: string, backgroundColor: string, collection: VariableCollection): Promise<FrameNode> {
+  const fallbackFrame = figma.createFrame();
+  fallbackFrame.name = title;
+  fallbackFrame.layoutMode = "VERTICAL";
+  fallbackFrame.primaryAxisSizingMode = "AUTO";
+  fallbackFrame.counterAxisSizingMode = "AUTO";
+  fallbackFrame.itemSpacing = 16;
+  fallbackFrame.paddingLeft = 16;
+  fallbackFrame.paddingRight = 16;
+  fallbackFrame.paddingTop = 16;
+  fallbackFrame.paddingBottom = 16;
+  fallbackFrame.cornerRadius = 8;
+  fallbackFrame.resize(520, 200);
+  
+  // Apply background color
+  applyVariableWithFallback(fallbackFrame, collection, backgroundColor, 'backgrounds').catch(() => {
+    // If variable binding fails, use a simple fill
+    fallbackFrame.fills = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
+  });
+  
+  // Add simple text with proper font loading
+  const text = figma.createText();
+  try {
+    // Load Inter Regular font before setting text
+    await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+    text.characters = `${title}\n\nComponent creation failed.\nPlease try again.`;
+    text.fontSize = 14;
+    text.fontName = { family: "Inter", style: "Regular" };
+    text.fills = [{ type: 'SOLID', color: { r: 0.3, g: 0.3, b: 0.3 } }];
+  } catch (fontError) {
+    console.error("Failed to load Inter font for fallback:", fontError);
+    // Set text without font specification as last resort
+    text.characters = `${title}\n\nComponent creation failed.\nPlease try again.`;
+    text.fontSize = 14;
+    text.fills = [{ type: 'SOLID', color: { r: 0.3, g: 0.3, b: 0.3 } }];
+  }
+  fallbackFrame.appendChild(text);
+  
+  return fallbackFrame;
 }
 
 // Utility function to create a fixed width frame
@@ -2712,7 +2876,7 @@ async function createFixedWidthFrame(content: FrameNode, backgroundColor: string
   content.layoutMode = "VERTICAL";
   content.primaryAxisSizingMode = "AUTO";
   content.counterAxisSizingMode = "AUTO";
-  content.layoutAlign = "CENTER";
+  content.layoutAlign = "STRETCH";
   content.counterAxisAlignItems = "CENTER";
 
   wrapper.appendChild(content);
@@ -2728,7 +2892,8 @@ async function createButton(
   collection: VariableCollection,
   text: string,
   _bgVarName: string,
-  _textVarName: string
+  _textVarName: string,
+  fontFamily: string | null = null
 ): Promise<FrameNode> {
   const button = figma.createFrame();
   button.name = `${text} Button`;
@@ -2761,11 +2926,12 @@ async function createButton(
   );
 
   const buttonText = figma.createText();
-  buttonText.characters = text;
-  buttonText.layoutAlign = "CENTER";
+  buttonText.layoutAlign = "STRETCH";
   buttonText.textAlignHorizontal = "CENTER";
-  // Apply label14 text style
-  await applyTextStyle(buttonText, "label14");
+  // Apply label14 text style FIRST before setting any text properties
+  await applyTextStyle(buttonText, "label14", fontFamily);
+  // Now set text properties after font is loaded
+  buttonText.characters = text;
 
   // Set text color to "text-icon/ti-brand-primary"
   await applyVariableWithFallback(
@@ -2780,7 +2946,7 @@ async function createButton(
 }
 
 // Featured Card Component
-async function createFeaturedCard(collection: VariableCollection): Promise<FrameNode> {
+async function createFeaturedCard(collection: VariableCollection, fontFamily: string | null = null): Promise<FrameNode> {
   const card = figma.createFrame();
   card.name = "Featured Product";
   card.layoutMode = "VERTICAL";
@@ -2834,13 +3000,13 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
 
   const title = figma.createText();
   title.name = "Title";
-  title.characters = "Product Title";
   title.layoutAlign = "STRETCH"; // Fill horizontally
+  // Apply label18 text style FIRST before setting any text properties
+  await applyTextStyle(title, "label18", fontFamily);
+  // Now set text properties after font is loaded
   title.textAutoResize = "HEIGHT"; // Auto-height
   title.textTruncation = 'ENDING'; // Enable truncation
-  // Remove fixed height to allow auto-height to work
-  // Apply label18 text style
-  await applyTextStyle(title, "label18");
+  title.characters = "Product Title";
 
   // Set text color with error handling
   await applyVariableWithFallback(
@@ -2852,13 +3018,14 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
 
   const description = figma.createText();
   description.name = "Description";
-  description.characters = "Lorem ipsum dolor sit amet, elit lacus consectetur adipiscing. Integer euismod sodales nam tomer lima consequat.";
   description.layoutAlign = "STRETCH"; // Fill horizontally
+  // Apply body14 text style FIRST before setting any text properties
+  await applyTextStyle(description, "body14", fontFamily);
+  // Now set text properties after font is loaded
   description.textAutoResize = "HEIGHT"; // Auto-height
   description.textTruncation = 'ENDING'; // Enable truncation with ellipsis
   description.maxLines = 2; // Limit to 2 lines
-  // Apply body14 text style
-  await applyTextStyle(description, "body14");
+  description.characters = "Lorem ipsum dolor sit amet, elit lacus consectetur adipiscing. Integer euismod sodales nam tomer lima consequat.";
 
   // Set secondary text color with error handling
   await applyVariableWithFallback(
@@ -2871,44 +3038,8 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
   content.appendChild(title);
   content.appendChild(description);
 
-  const button = figma.createFrame();
-  button.name = "Primary Button";
-  button.layoutMode = "HORIZONTAL";
-  button.primaryAxisSizingMode = "FIXED";
-  button.counterAxisSizingMode = "FIXED";
-  button.primaryAxisAlignItems = "CENTER";
-  button.counterAxisAlignItems = "CENTER";
-  button.paddingLeft = 16;
-  button.paddingRight = 16;
-  button.paddingTop = 8;
-  button.paddingBottom = 8;
-  button.cornerRadius = 6;
+  const button = await createButton(collection, "Primary", BUTTON_STYLES.primary.bg, BUTTON_STYLES.primary.text, fontFamily);
   button.resize(336, 40);
-
-  // Set background color with error handling
-  await applyVariableWithFallback(
-    button,
-    collection,
-    BUTTON_STYLES.primary.bg,
-    'backgrounds'
-  );
-
-  const buttonText = figma.createText();
-  buttonText.characters = "Primary";
-  buttonText.fontSize = 14;
-  buttonText.fontName = { family: "Inter", style: "Medium" };
-  buttonText.layoutAlign = "CENTER";
-  buttonText.textAlignHorizontal = "CENTER";
-
-  // Set text color with error handling
-  await applyVariableWithFallback(
-    buttonText,
-    collection,
-    BUTTON_STYLES.primary.text,
-    'text'
-  );
-
-  button.appendChild(buttonText);
   button.layoutAlign = "STRETCH";
 
   card.appendChild(preview);
@@ -2923,7 +3054,7 @@ async function createFeaturedCard(collection: VariableCollection): Promise<Frame
 // ===============================================
 
 // Product List Components
-async function createProductList(collection: VariableCollection): Promise<FrameNode> {
+async function createProductList(collection: VariableCollection, fontFamily: string | null = null): Promise<FrameNode> {
   const list = figma.createFrame();
   list.name = "Product List";
   list.layoutMode = "VERTICAL";
@@ -2963,7 +3094,7 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
   ];
 
   for (let i = 0; i < items.length; i++) {
-    const listItem = await createProductListItem(collection, items[i].title, items[i].buttonVariant);
+    const listItem = await createProductListItem(collection, items[i].title, items[i].buttonVariant, fontFamily);
     list.appendChild(listItem);
 
     // Add horizontal line between items
@@ -2989,7 +3120,8 @@ async function createProductList(collection: VariableCollection): Promise<FrameN
 async function createProductListItem(
   collection: VariableCollection, 
   title: string,
-  buttonVariant: ButtonVariant
+  buttonVariant: ButtonVariant,
+  fontFamily: string | null = null
 ): Promise<FrameNode> {
   const item = figma.createFrame();
   item.name = "Product Item";
@@ -3054,12 +3186,13 @@ async function createProductListItem(
   );
 
   const itemTitle = figma.createText();
-  itemTitle.characters = title;
   itemTitle.layoutAlign = "STRETCH"; // Fill horizontally
+  // Apply label14 text style FIRST before setting any text properties
+  await applyTextStyle(itemTitle, "label14", fontFamily);
+  // Now set text properties after font is loaded
   itemTitle.textAutoResize = "HEIGHT"; // Auto-height
   itemTitle.textTruncation = 'ENDING'; // Enable truncation
-  // Apply label14 text style
-  await applyTextStyle(itemTitle, "label14");
+  itemTitle.characters = title;
   
   // Remove fixed height to allow auto-height to work
 
@@ -3072,13 +3205,14 @@ async function createProductListItem(
   );
 
   const description = figma.createText();
-  description.characters = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer euismod sodales nam tomer lima consequat.";
   description.layoutAlign = "STRETCH"; // Fill horizontally
+  // Apply body12 text style FIRST before setting any text properties
+  await applyTextStyle(description, "body12", fontFamily);
+  // Now set text properties after font is loaded
   description.textAutoResize = "HEIGHT"; // Auto-height
   description.textTruncation = 'ENDING'; // Enable truncation with ellipsis
   description.maxLines = 2; // Limit to 2 lines
-  // Apply body12 text style
-  await applyTextStyle(description, "body12");
+  description.characters = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer euismod sodales nam tomer lima consequat.";
 
   // Set secondary text color with error handling
   await applyVariableWithFallback(
@@ -3095,7 +3229,7 @@ async function createProductListItem(
   autoLayoutFrame.appendChild(content);
 
   const style = BUTTON_STYLES[buttonVariant];
-          const button = await createButton(collection, "Button", style.bg, "text-icon/ti-brand-primary"); // Use "text-icon/ti-brand-primary" for mini buttons
+          const button = await createButton(collection, "Button", style.bg, "text-icon/ti-brand-primary", fontFamily); // Use "text-icon/ti-brand-primary" for mini buttons
   button.primaryAxisSizingMode = "AUTO"; // Hug contents horizontally
   button.counterAxisSizingMode = "AUTO"; // Hug contents vertically
 
@@ -3110,7 +3244,7 @@ async function createProductListItem(
 // ===============================================
 
 // Notification Components
-async function createNotifications(collection: VariableCollection): Promise<FrameNode> {
+async function createNotifications(collection: VariableCollection, fontFamily: string | null = null): Promise<FrameNode> {
   const notificationsFrame = figma.createFrame();
   notificationsFrame.name = "Notifications";
   notificationsFrame.layoutMode = "VERTICAL";
@@ -3146,7 +3280,8 @@ async function createNotifications(collection: VariableCollection): Promise<Fram
       notifications[i].message,
       notifications[i].bgVar,
       notifications[i].textVar,
-      i === 0 // Only include icon for the first notification
+      i === 0, // Only include icon for the first notification
+      fontFamily
     );
     notificationsFrame.appendChild(notif);
   }
@@ -3159,7 +3294,8 @@ async function createNotification(
   message: string,
   bgVarName: keyof typeof FALLBACK_COLORS.backgrounds,
   textVarName: string,
-  includeIcon: boolean = false
+  includeIcon: boolean = false,
+  fontFamily: string | null = null
 ): Promise<FrameNode> {
   const notification = figma.createFrame();
   notification.name = "Notification";
@@ -3306,14 +3442,14 @@ async function createNotification(
   textWrapper.fills = [];
 
   const text = figma.createText();
-  text.characters = message;
   text.layoutAlign = "STRETCH"; // Stretch horizontally
+  // Apply body14 text style FIRST before setting any text properties
+  await applyTextStyle(text, "body14", fontFamily);
+  // Now set text properties after font is loaded
   text.textAutoResize = "HEIGHT"; // Auto-height
-  text.textTruncation = 'ENDING'; // Enable truncation with ellipsis
+  text.textTruncation = 'ENDING';
   text.maxLines = 2; // Limit to 2 lines
-  // Remove fixed height to allow auto-height to work
-  // Apply body14 text style
-  await applyTextStyle(text, "body14");
+  text.characters = message;
 
   // Set text color with error handling
   await applyVariableWithFallback(
@@ -3403,15 +3539,16 @@ const DOCUMENTATION_ITEMS: DocumentationItem[] = [
 ];
 
 // Main documentation export function
-async function exportDocumentation(collection: VariableCollection, semanticCollection: VariableCollection | null = null) {
+async function exportDocumentation(collection: VariableCollection, semanticCollection: VariableCollection | null = null, fontFamily: string | null = null) {
   console.log("exportDocumentation called with collection:", collection.name);
   try {
     // Load required fonts with error handling
+    const fontFamilyName = fontFamily ? getFontDisplayName(fontFamily) : "Inter";
     try {
     await Promise.all([
-        loadFontWithFallback(getCurrentFontFamily(), "Regular"),
-        loadFontWithFallback(getCurrentFontFamily(), "Medium"),
-        loadFontWithFallback(getCurrentFontFamily(), "Bold")
+        loadFontWithFallback(fontFamilyName, "Regular"),
+        loadFontWithFallback(fontFamilyName, "Medium"),
+        loadFontWithFallback(fontFamilyName, "Bold")
       ]);
     } catch (error) {
       console.warn("Failed to load some fonts, continuing with available fonts:", error);
@@ -3456,10 +3593,11 @@ frame.appendChild(titleContainer);
 
     // Add title
     const title = figma.createText();
-    title.characters = "Color";
+    // Apply display52 text style FIRST before setting any text properties
+    await applyTextStyle(title, "display52", fontFamily);
+    // Now set text properties after font is loaded
     title.textAutoResize = "WIDTH_AND_HEIGHT";
-    // Apply display52 text style
-    await applyTextStyle(title, "display52");
+    title.characters = "Color";
     // Apply text color variable
     await applyVariableWithFallback(title, semanticCollection || collection, "text-icon/ti-neutral-primary", 'text');
     titleContainer.appendChild(title);
@@ -3472,7 +3610,7 @@ frame.appendChild(titleContainer);
       const categoryItems = DOCUMENTATION_ITEMS.filter(item => item.category === category);
       if (categoryItems.length > 0) {
         const isFirstSection = i === 0;
-        const categorySection = await createCategorySection(category, categoryItems, semanticCollection || collection, isFirstSection);
+        const categorySection = await createCategorySection(category, categoryItems, semanticCollection || collection, isFirstSection, fontFamily);
         frame.appendChild(categorySection);
         
         // Add separator line between sections (except after the last section)
@@ -3498,7 +3636,7 @@ frame.appendChild(titleContainer);
 }
 
 // Create category section
-async function createCategorySection(category: string, items: DocumentationItem[], collection: VariableCollection, isFirstSection: boolean = false): Promise<FrameNode> {
+async function createCategorySection(category: string, items: DocumentationItem[], collection: VariableCollection, isFirstSection: boolean = false, fontFamily: string | null = null): Promise<FrameNode> {
   const section = figma.createFrame();
   section.name = `${category.charAt(0).toUpperCase() + category.slice(1)} Section`;
   section.layoutMode = "VERTICAL";
@@ -3525,11 +3663,12 @@ async function createCategorySection(category: string, items: DocumentationItem[
   headingContainer.layoutAlign = "STRETCH";
   
   const heading = figma.createText();
-  heading.characters = category.charAt(0).toUpperCase() + category.slice(1);
-  heading.textAutoResize = "HEIGHT";
   heading.layoutAlign = "STRETCH";
-  // Apply label18 text style
-  await applyTextStyle(heading, "label18");
+  // Apply label18 text style FIRST before setting any text properties
+  await applyTextStyle(heading, "label18", fontFamily);
+  // Now set text properties after font is loaded
+  heading.textAutoResize = "HEIGHT";
+  heading.characters = category.charAt(0).toUpperCase() + category.slice(1);
   // Apply text color variable
   await applyVariableWithFallback(heading, collection, "text-icon/ti-neutral-secondary", 'text');
   
@@ -3562,7 +3701,7 @@ async function createCategorySection(category: string, items: DocumentationItem[
   // Add items
   for (let i = 0; i < items.length; i++) {
     const isLastItem = i === items.length - 1;
-    const itemRow = await createItemRow(items[i], collection, isLastItem);
+    const itemRow = await createItemRow(items[i], collection, isLastItem, fontFamily);
     contentWrapper.appendChild(itemRow);
     
     // Add separator line (except for last item)
@@ -3579,7 +3718,7 @@ async function createCategorySection(category: string, items: DocumentationItem[
 }
 
 // Create header row
-async function createHeaderRow(category: string, collection: VariableCollection): Promise<FrameNode> {
+async function createHeaderRow(category: string, collection: VariableCollection, fontFamily: string | null = null): Promise<FrameNode> {
   const headerRow = figma.createFrame();
   headerRow.name = "Header Row";
   headerRow.layoutMode = "HORIZONTAL";
@@ -3593,33 +3732,33 @@ async function createHeaderRow(category: string, collection: VariableCollection)
 
   // Style Name header
   const styleNameHeader = figma.createText();
-  styleNameHeader.characters = "Style Name";
+  // Apply label12 text style FIRST before setting any text properties
+  await applyTextStyle(styleNameHeader, "label12", fontFamily);
+  // Now set text properties after font is loaded
   styleNameHeader.textAutoResize = "HEIGHT";
-  // Remove fixed height to allow auto-height to work
-  // Apply label12 text style
-  await applyTextStyle(styleNameHeader, "label12");
+  styleNameHeader.characters = "Style Name";
   // Apply text color variable
   await applyVariableWithFallback(styleNameHeader, collection, "text-icon/ti-neutral-secondary", 'text');
   headerRow.appendChild(styleNameHeader);
 
   // Primitive header
   const primitiveHeader = figma.createText();
-  primitiveHeader.characters = "Primitive - Radix";
+  // Apply label12 text style FIRST before setting any text properties
+  await applyTextStyle(primitiveHeader, "label12", fontFamily);
+  // Now set text properties after font is loaded
   primitiveHeader.textAutoResize = "HEIGHT";
-  // Remove fixed height to allow auto-height to work
-  // Apply label12 text style
-  await applyTextStyle(primitiveHeader, "label12");
+  primitiveHeader.characters = "Primitive - Radix";
   // Apply text color variable
   await applyVariableWithFallback(primitiveHeader, collection, "text-icon/ti-neutral-secondary", 'text');
   headerRow.appendChild(primitiveHeader);
 
   // Hex Value header
   const hexValueHeader = figma.createText();
-  hexValueHeader.characters = "Hex Value";
+  // Apply label12 text style FIRST before setting any text properties
+  await applyTextStyle(hexValueHeader, "label12", fontFamily);
+  // Now set text properties after font is loaded
   hexValueHeader.textAutoResize = "HEIGHT";
-  // Remove fixed height to allow auto-height to work
-  // Apply label12 text style
-  await applyTextStyle(hexValueHeader, "label12");
+  hexValueHeader.characters = "Hex Value";
   // Apply text color variable
   await applyVariableWithFallback(hexValueHeader, collection, "text-icon/ti-neutral-secondary", 'text');
   headerRow.appendChild(hexValueHeader);
@@ -3628,7 +3767,7 @@ async function createHeaderRow(category: string, collection: VariableCollection)
 }
 
 // Create item row
-async function createItemRow(item: DocumentationItem, collection: VariableCollection, isLastItem: boolean = false): Promise<FrameNode> {
+async function createItemRow(item: DocumentationItem, collection: VariableCollection, isLastItem: boolean = false, fontFamily: string | null = null): Promise<FrameNode> {
   const row = figma.createFrame();
   row.name = `${item.name} Row`;
   row.layoutMode = "HORIZONTAL";
@@ -3685,10 +3824,11 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   
   // Style name
   const styleName = figma.createText();
-  styleName.characters = item.name.toLowerCase();
+  // Apply body14 text style FIRST before setting any text properties
+  await applyTextStyle(styleName, "body14", fontFamily);
+  // Now set text properties after font is loaded
   styleName.textAutoResize = "WIDTH_AND_HEIGHT";
-  // Apply body14 text style
-  await applyTextStyle(styleName, "body14");
+  styleName.characters = item.name.toLowerCase();
   // Apply text color variable
   await applyVariableWithFallback(styleName, collection, "text-icon/ti-neutral-primary", 'text');
   
@@ -3725,10 +3865,11 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
   await applyVariableWithFallback(primitiveBadge, collection, "surface/sf-neutral-secondary", 'backgrounds');
 
   const primitiveText = figma.createText();
-  primitiveText.characters = item.primitiveSource.toLowerCase();
+  // Apply body12 text style FIRST before setting any text properties
+  await applyTextStyle(primitiveText, "body12", fontFamily);
+  // Now set text properties after font is loaded
   primitiveText.textAutoResize = "WIDTH_AND_HEIGHT";
-  // Apply body12 text style
-  await applyTextStyle(primitiveText, "body12");
+  primitiveText.characters = item.primitiveSource.toLowerCase();
   // Apply text color variable
   await applyVariableWithFallback(primitiveText, collection, "text-icon/ti-neutral-secondary", 'text');
   primitiveBadge.appendChild(primitiveText);
@@ -3790,13 +3931,14 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
       await applyVariableWithFallback(hexValueBadge, collection, "surface/sf-neutral-secondary", 'backgrounds');
 
       const hexValueText = figma.createText();
+      hexValueText.textAlignHorizontal = "CENTER";
+      // Apply body12 text style FIRST before setting any text properties
+      await applyTextStyle(hexValueText, "body12", fontFamily);
+      // Now set text properties after font is loaded
+      hexValueText.textAutoResize = "WIDTH_AND_HEIGHT";
       // Use the normalizeHex function to ensure 6 characters
       const normalizedHex = normalizeHex(hexValue);
       hexValueText.characters = normalizedHex;
-      hexValueText.textAutoResize = "WIDTH_AND_HEIGHT";
-      hexValueText.textAlignHorizontal = "CENTER";
-      // Apply body12 text style
-      await applyTextStyle(hexValueText, "body12");
       // Apply text color variable
       await applyVariableWithFallback(hexValueText, collection, "text-icon/ti-neutral-secondary", 'text');
       hexValueBadge.appendChild(hexValueText);
@@ -3819,14 +3961,14 @@ async function createItemRow(item: DocumentationItem, collection: VariableCollec
       await applyVariableWithFallback(hexValueBadge, collection, "surface/sf-neutral-secondary", 'backgrounds');
 
     const hexValueText = figma.createText();
-    // Try to get hex value using the old method as fallback
+    // Apply body12 text style FIRST before setting any text properties
+    await applyTextStyle(hexValueText, "body12", fontFamily);
+    // Now set text properties after font is loaded
+    hexValueText.textAutoResize = "WIDTH_AND_HEIGHT";
     const hexValue = await getHexValueFromVariable(collection, item.variablePath);
     // Use the normalizeHex function to ensure 6 characters
     const normalizedHex = normalizeHex(hexValue);
     hexValueText.characters = normalizedHex;
-    hexValueText.textAutoResize = "WIDTH_AND_HEIGHT";
-    // Apply body12 text style
-    await applyTextStyle(hexValueText, "body12");
           // Apply text color variable
       await applyVariableWithFallback(hexValueText, collection, "text-icon/ti-neutral-secondary", 'text');
     hexValueBadge.appendChild(hexValueText);
