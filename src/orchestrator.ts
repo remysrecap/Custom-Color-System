@@ -174,7 +174,7 @@ export class PluginOrchestrator {
       }
       
       // Generate color themes
-      const themes = createColorThemes(hexColor, neutral, success, error, appearance);
+      const themes = generateColorThemes(hexColor, neutral, success, error, appearance);
       
       // Create collections and variables based on includePrimitives setting
       if (includePrimitives) {
