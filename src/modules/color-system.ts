@@ -527,42 +527,71 @@ export async function createDirectVariables(
       }
     }
 
-    // Text & Icon variables
-    await Promise.all([
-      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-neutral-primary", neutralTheme.accentScale[12]),
-      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-neutral-secondary", neutralTheme.accentScale[11]),
-      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-brand-primary", brandTheme.accentScale[9]),
-      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-brand-primary", brandTheme.accentContrast),
-      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-brand-primary-subtle", brandTheme.accentScale[11]),
-      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-error", errorTheme.accentContrast),
-      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-error-subtle", errorTheme.accentScale[11]),
-      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-success", successTheme.accentContrast),
-      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-success-subtle", successTheme.accentScale[11])
-    ]);
+    // Text & Icon variables - direct API calls
+    log.info(`Creating text & icon variables with direct API calls`, 'color-system', 'createDirectVariables');
+    const textIconVars = [
+      { name: "text-icon/ti-neutral-primary", color: neutralTheme.accentScale[12] },
+      { name: "text-icon/ti-neutral-secondary", color: neutralTheme.accentScale[11] },
+      { name: "text-icon/ti-brand-primary", color: brandTheme.accentScale[9] },
+      { name: "text-icon/ti-on-bg-brand-primary", color: brandTheme.accentContrast },
+      { name: "text-icon/ti-on-bg-brand-primary-subtle", color: brandTheme.accentScale[11] },
+      { name: "text-icon/ti-on-bg-error", color: errorTheme.accentContrast },
+      { name: "text-icon/ti-on-bg-error-subtle", color: errorTheme.accentScale[11] },
+      { name: "text-icon/ti-on-bg-success", color: successTheme.accentContrast },
+      { name: "text-icon/ti-on-bg-success-subtle", color: successTheme.accentScale[11] }
+    ];
+    
+    for (const { name, color } of textIconVars) {
+      try {
+        const variable = figma.variables.createVariable(name, collection, "COLOR");
+        log.success(`Created variable: ${name}`, 'color-system', 'createDirectVariables');
+      } catch (error) {
+        log.error(`Failed to create variable ${name}: ${error}`, 'color-system', 'createDirectVariables');
+      }
+    }
 
-    // Background variables
-    await Promise.all([
-      createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary", brandTheme.accentScale[9]),
-      createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-emphasized", brandTheme.accentScale[10]),
-      createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle", brandTheme.accentScale[3]),
-      createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle-emphasized", brandTheme.accentScale[4]),
-      createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-overlay", brandTheme.accentScaleAlpha[6]),
-      createOrUpdateColorVariable(collection, modeId, "background/bg-error", errorTheme.accentScale[9]),
-      createOrUpdateColorVariable(collection, modeId, "background/bg-error-emphasized", errorTheme.accentScale[10]),
-      createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle", errorTheme.accentScale[3]),
-      createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle-emphasized", errorTheme.accentScale[4]),
-      createOrUpdateColorVariable(collection, modeId, "background/bg-success", successTheme.accentScale[9]),
-      createOrUpdateColorVariable(collection, modeId, "background/bg-success-emphasized", successTheme.accentScale[10]),
-      createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle", successTheme.accentScale[3]),
-      createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle-emphasized", successTheme.accentScale[4])
-    ]);
+    // Background variables - direct API calls
+    log.info(`Creating background variables with direct API calls`, 'color-system', 'createDirectVariables');
+    const backgroundVars = [
+      { name: "background/bg-brand-primary", color: brandTheme.accentScale[9] },
+      { name: "background/bg-brand-primary-emphasized", color: brandTheme.accentScale[10] },
+      { name: "background/bg-brand-primary-subtle", color: brandTheme.accentScale[3] },
+      { name: "background/bg-brand-primary-subtle-emphasized", color: brandTheme.accentScale[4] },
+      { name: "background/bg-brand-primary-overlay", color: brandTheme.accentScaleAlpha[6] },
+      { name: "background/bg-error", color: errorTheme.accentScale[9] },
+      { name: "background/bg-error-emphasized", color: errorTheme.accentScale[10] },
+      { name: "background/bg-error-subtle", color: errorTheme.accentScale[3] },
+      { name: "background/bg-error-subtle-emphasized", color: errorTheme.accentScale[4] },
+      { name: "background/bg-success", color: successTheme.accentScale[9] },
+      { name: "background/bg-success-emphasized", color: successTheme.accentScale[10] },
+      { name: "background/bg-success-subtle", color: successTheme.accentScale[3] },
+      { name: "background/bg-success-subtle-emphasized", color: successTheme.accentScale[4] }
+    ];
+    
+    for (const { name, color } of backgroundVars) {
+      try {
+        const variable = figma.variables.createVariable(name, collection, "COLOR");
+        log.success(`Created variable: ${name}`, 'color-system', 'createDirectVariables');
+      } catch (error) {
+        log.error(`Failed to create variable ${name}: ${error}`, 'color-system', 'createDirectVariables');
+      }
+    }
 
-    // Hardcoded variables
-    log.info(`Creating hardcoded variables for mode: ${modeId}`, 'color-system', 'createDirectVariables');
-    await Promise.all([
-      createOrUpdateHardcodedVar(collection, modeId, "surface/sf-overlay", { r: 0, g: 0, b: 0, a: 0.65 }),
-      createOrUpdateHardcodedVar(collection, modeId, "text-icon/ti-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
-    ]);
+    // Hardcoded variables - direct API calls
+    log.info(`Creating hardcoded variables with direct API calls`, 'color-system', 'createDirectVariables');
+    const hardcodedVars = [
+      { name: "surface/sf-overlay", color: "#000000A6" }, // rgba(0, 0, 0, 0.65)
+      { name: "text-icon/ti-on-surface-overlay", color: "#FFFFFF" } // rgba(1, 1, 1, 1)
+    ];
+    
+    for (const { name, color } of hardcodedVars) {
+      try {
+        const variable = figma.variables.createVariable(name, collection, "COLOR");
+        log.success(`Created variable: ${name}`, 'color-system', 'createDirectVariables');
+      } catch (error) {
+        log.error(`Failed to create variable ${name}: ${error}`, 'color-system', 'createDirectVariables');
+      }
+    }
     log.info(`Finished creating hardcoded variables`, 'color-system', 'createDirectVariables');
 
     log.success('Direct variables created successfully', 'color-system', 'createDirectVariables');
