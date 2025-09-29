@@ -145,7 +145,7 @@ export class PluginOrchestrator {
   /**
    * Handles palette generation
    */
-  private async handleGeneratePalette(msg: PluginMessage): Promise<void> {
+  public async handleGeneratePalette(msg: PluginMessage): Promise<void> {
     try {
       log.info('Handling generate palette request', 'orchestrator', 'handleGeneratePalette');
       
@@ -210,7 +210,7 @@ export class PluginOrchestrator {
   /**
    * Handles GT Standard font testing
    */
-  private async handleTestGTStandard(): Promise<void> {
+  public async handleTestGTStandard(): Promise<void> {
     try {
       log.info('Handling GT Standard test request', 'orchestrator', 'handleTestGTStandard');
       
@@ -226,7 +226,7 @@ export class PluginOrchestrator {
   /**
    * Handles GT Standard font discovery
    */
-  private async handleDiscoverGTStandard(): Promise<void> {
+  public async handleDiscoverGTStandard(): Promise<void> {
     try {
       log.info('Handling GT Standard discovery request', 'orchestrator', 'handleDiscoverGTStandard');
       
@@ -240,7 +240,7 @@ export class PluginOrchestrator {
   /**
    * Handles font mode updates
    */
-  private async handleUpdateFontMode(msg: PluginMessage): Promise<void> {
+  public async handleUpdateFontMode(msg: PluginMessage): Promise<void> {
     try {
       log.info('Handling font mode update request', 'orchestrator', 'handleUpdateFontMode');
       
@@ -256,7 +256,7 @@ export class PluginOrchestrator {
   /**
    * Handles font variable binding
    */
-  private async handleBindFontVariables(): Promise<void> {
+  public async handleBindFontVariables(): Promise<void> {
     try {
       log.info('Handling font variable binding request', 'orchestrator', 'handleBindFontVariables');
       

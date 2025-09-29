@@ -73,9 +73,13 @@ export class UIModule {
     try {
       log.info('Handling generate palette request', 'ui-module', 'handleGeneratePalette');
       
-      // Import and call the main palette generation handler
-      const { handleGeneratePalette } = await import('../main');
-      await handleGeneratePalette(message);
+      // Get the orchestrator from global scope
+      const orchestrator = (globalThis as any).pluginOrchestrator;
+      if (orchestrator) {
+        await orchestrator.handleGeneratePalette(message);
+      } else {
+        throw new Error('Orchestrator not found');
+      }
     } catch (error) {
       logError('Failed to handle generate palette', error as Error);
       throw error;
@@ -89,9 +93,13 @@ export class UIModule {
     try {
       log.info('Handling GT Standard test request', 'ui-module', 'handleTestGTStandard');
       
-      // Import and call the GT Standard test handler
-      const { handleTestGTStandard } = await import('../main');
-      await handleTestGTStandard();
+      // Get the orchestrator from global scope
+      const orchestrator = (globalThis as any).pluginOrchestrator;
+      if (orchestrator) {
+        await orchestrator.handleTestGTStandard();
+      } else {
+        throw new Error('Orchestrator not found');
+      }
     } catch (error) {
       logError('Failed to handle GT Standard test', error as Error);
       throw error;
@@ -105,9 +113,13 @@ export class UIModule {
     try {
       log.info('Handling GT Standard discovery request', 'ui-module', 'handleDiscoverGTStandard');
       
-      // Import and call the GT Standard discovery handler
-      const { handleDiscoverGTStandard } = await import('../main');
-      await handleDiscoverGTStandard();
+      // Get the orchestrator from global scope
+      const orchestrator = (globalThis as any).pluginOrchestrator;
+      if (orchestrator) {
+        await orchestrator.handleDiscoverGTStandard();
+      } else {
+        throw new Error('Orchestrator not found');
+      }
     } catch (error) {
       logError('Failed to handle GT Standard discovery', error as Error);
       throw error;
@@ -121,9 +133,13 @@ export class UIModule {
     try {
       log.info('Handling font mode update request', 'ui-module', 'handleUpdateFontMode');
       
-      // Import and call the font mode update handler
-      const { handleUpdateFontMode } = await import('../main');
-      await handleUpdateFontMode(message);
+      // Get the orchestrator from global scope
+      const orchestrator = (globalThis as any).pluginOrchestrator;
+      if (orchestrator) {
+        await orchestrator.handleUpdateFontMode(message);
+      } else {
+        throw new Error('Orchestrator not found');
+      }
     } catch (error) {
       logError('Failed to handle font mode update', error as Error);
       throw error;
@@ -137,9 +153,13 @@ export class UIModule {
     try {
       log.info('Handling font variable binding request', 'ui-module', 'handleBindFontVariables');
       
-      // Import and call the font variable binding handler
-      const { handleBindFontVariables } = await import('../main');
-      await handleBindFontVariables();
+      // Get the orchestrator from global scope
+      const orchestrator = (globalThis as any).pluginOrchestrator;
+      if (orchestrator) {
+        await orchestrator.handleBindFontVariables();
+      } else {
+        throw new Error('Orchestrator not found');
+      }
     } catch (error) {
       logError('Failed to handle font variable binding', error as Error);
       throw error;
