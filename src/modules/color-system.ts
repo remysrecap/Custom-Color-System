@@ -497,10 +497,14 @@ export async function createDirectVariables(
     const testResult = await testFunction();
     log.info(`Test function result: ${testResult}`, 'color-system', 'createDirectVariables');
     
-    // Surface variables - test one at a time
+    // Test direct function call with minimal parameters
     log.info(`About to call createOrUpdateColorVariable for surface/sf-neutral-primary`, 'color-system', 'createDirectVariables');
-    const result1 = await createOrUpdateColorVariable(collection, modeId, "surface/sf-neutral-primary", brandTheme.background);
-    log.info(`Result for surface/sf-neutral-primary: ${result1 ? 'SUCCESS' : 'FAILED'}`, 'color-system', 'createDirectVariables');
+    try {
+      const result1 = await createOrUpdateColorVariable(collection, modeId, "surface/sf-neutral-primary", brandTheme.background);
+      log.info(`Result for surface/sf-neutral-primary: ${result1 ? 'SUCCESS' : 'FAILED'}`, 'color-system', 'createDirectVariables');
+    } catch (error) {
+      log.error(`Direct function call error: ${error}`, 'color-system', 'createDirectVariables');
+    }
     
     // Continue with the rest
     await Promise.all([
