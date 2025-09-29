@@ -458,6 +458,24 @@ export async function testFunction(): Promise<string> {
  * Simple test version of createOrUpdateColorVariable
  */
 export async function createOrUpdateColorVariable(collection: VariableCollection, modeId: string, name: string, colorHex: string): Promise<Variable | null> {
+  // Parameter validation first
+  if (!collection) {
+    log.error(`Collection is null/undefined`, 'figma-api', 'createOrUpdateColorVariable');
+    return null;
+  }
+  if (!modeId) {
+    log.error(`ModeId is null/undefined`, 'figma-api', 'createOrUpdateColorVariable');
+    return null;
+  }
+  if (!name) {
+    log.error(`Name is null/undefined`, 'figma-api', 'createOrUpdateColorVariable');
+    return null;
+  }
+  if (!colorHex) {
+    log.error(`ColorHex is null/undefined`, 'figma-api', 'createOrUpdateColorVariable');
+    return null;
+  }
+  
   log.info(`🚀 SIMPLE FUNCTION CALLED: createOrUpdateColorVariable for ${name}`, 'figma-api', 'createOrUpdateColorVariable');
   
   try {
