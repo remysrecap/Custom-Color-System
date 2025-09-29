@@ -481,7 +481,10 @@ export async function createOrUpdateColorVariable(collection: VariableCollection
     log.success(`Created variable ${name} with value: ${JSON.stringify(rgb)}`, 'figma-api', 'createOrUpdateColorVariable');
     return variable;
   } catch (error) {
-    log.error(`Detailed error for ${name}: ${error}`, 'figma-api', 'createOrUpdateColorVariable');
+    log.error(`CRITICAL ERROR in createOrUpdateColorVariable for ${name}:`, 'figma-api', 'createOrUpdateColorVariable');
+    log.error(`Error type: ${typeof error}`, 'figma-api', 'createOrUpdateColorVariable');
+    log.error(`Error message: ${error}`, 'figma-api', 'createOrUpdateColorVariable');
+    log.error(`Error stack: ${error instanceof Error ? error.stack : 'No stack trace'}`, 'figma-api', 'createOrUpdateColorVariable');
     logError(`Failed to create/update color variable: ${name}`, error as Error);
     return null;
   }
