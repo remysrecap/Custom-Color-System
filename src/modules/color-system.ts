@@ -430,15 +430,9 @@ export async function createSemanticVariables(
     const lightMode = semanticCollection.modes[0];
     semanticCollection.renameMode(lightMode.modeId, "Light");
 
-    // Create semantic variables for light mode
+    // For Advanced Export ON: Semantic collection only needs ONE mode
+    // The semantic variables reference primitive variables that have multiple modes
     await createSemanticVariablesForMode(semanticCollection, primitiveCollection, lightMode.modeId);
-
-    // Create semantic variables for dark mode if needed
-    if (appearance === "dark" || appearance === "both") {
-      const darkModeId = appearance === "both" ? 
-        semanticCollection.addMode("Dark") : lightMode.modeId;
-      await createSemanticVariablesForMode(semanticCollection, primitiveCollection, darkModeId);
-    }
 
     log.success('Semantic variables created successfully', 'color-system', 'createSemanticVariables');
   } catch (error) {
