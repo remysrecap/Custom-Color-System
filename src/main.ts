@@ -159,12 +159,8 @@ async function handleGeneratePalette(msg: PluginMessage): Promise<void> {
     // Generate color themes
     const themes = generateColorThemes(hexColor, neutral, success, error, appearance);
     
-    // Create collections and variables
-    if (includePrimitives) {
-      await createPrimitiveSystem(versionNumber, themes, appearance, includeFontSystem, exportDemo, shouldExportDocumentation);
-    } else {
-      await createDirectSystem(versionNumber, themes, appearance, includeFontSystem, exportDemo, shouldExportDocumentation);
-    }
+    // Create collections and variables - always use primitive system (like original)
+    await createPrimitiveSystem(versionNumber, themes, appearance, includeFontSystem, exportDemo, shouldExportDocumentation);
     
     // Show success notification
     if (!isClosing) {

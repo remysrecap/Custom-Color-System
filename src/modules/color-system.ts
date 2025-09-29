@@ -277,47 +277,102 @@ export async function createPrimitiveVariables(
   log.info(`Creating primitive variables for mode: ${modeId}`, 'color-system', 'createPrimitiveVariables');
   
   try {
-    // Create brand color scales
-    await Promise.all(brandTheme.accentScale.map((color, index) => 
-      createOrUpdateColorVariable(collection, modeId, `Brand Scale/${index + 1}`, color)
-    ));
+    // Create brand color scales - direct API calls
+    for (let i = 0; i < brandTheme.accentScale.length; i++) {
+      try {
+        const variable = figma.variables.createVariable(`Brand Scale/${i + 1}`, collection, "COLOR");
+        log.success(`Created variable: Brand Scale/${i + 1}`, 'color-system', 'createPrimitiveVariables');
+      } catch (error) {
+        log.error(`Failed to create variable Brand Scale/${i + 1}: ${error}`, 'color-system', 'createPrimitiveVariables');
+      }
+    }
 
-    await Promise.all(brandTheme.accentScaleAlpha.map((color, index) => 
-      createOrUpdateColorVariable(collection, modeId, `Brand Scale Alpha/${index + 1}`, color)
-    ));
+    for (let i = 0; i < brandTheme.accentScaleAlpha.length; i++) {
+      try {
+        const variable = figma.variables.createVariable(`Brand Scale Alpha/${i + 1}`, collection, "COLOR");
+        log.success(`Created variable: Brand Scale Alpha/${i + 1}`, 'color-system', 'createPrimitiveVariables');
+      } catch (error) {
+        log.error(`Failed to create variable Brand Scale Alpha/${i + 1}: ${error}`, 'color-system', 'createPrimitiveVariables');
+      }
+    }
 
-    await createOrUpdateColorVariable(collection, modeId, `Brand Contrast/1`, brandTheme.accentContrast);
+    try {
+      const variable = figma.variables.createVariable(`Brand Contrast/1`, collection, "COLOR");
+      log.success(`Created variable: Brand Contrast/1`, 'color-system', 'createPrimitiveVariables');
+    } catch (error) {
+      log.error(`Failed to create variable Brand Contrast/1: ${error}`, 'color-system', 'createPrimitiveVariables');
+    }
 
-    // Create neutral color scales
-    await Promise.all(neutralTheme.accentScale.map((color, index) => 
-      createOrUpdateColorVariable(collection, modeId, `Neutral Scale/${index + 1}`, color)
-    ));
+    // Create neutral color scales - direct API calls
+    for (let i = 0; i < neutralTheme.accentScale.length; i++) {
+      try {
+        const variable = figma.variables.createVariable(`Neutral Scale/${i + 1}`, collection, "COLOR");
+        log.success(`Created variable: Neutral Scale/${i + 1}`, 'color-system', 'createPrimitiveVariables');
+      } catch (error) {
+        log.error(`Failed to create variable Neutral Scale/${i + 1}: ${error}`, 'color-system', 'createPrimitiveVariables');
+      }
+    }
 
-    await Promise.all(neutralTheme.accentScaleAlpha.map((color, index) => 
-      createOrUpdateColorVariable(collection, modeId, `Neutral Scale Alpha/${index + 1}`, color)
-    ));
+    for (let i = 0; i < neutralTheme.accentScaleAlpha.length; i++) {
+      try {
+        const variable = figma.variables.createVariable(`Neutral Scale Alpha/${i + 1}`, collection, "COLOR");
+        log.success(`Created variable: Neutral Scale Alpha/${i + 1}`, 'color-system', 'createPrimitiveVariables');
+      } catch (error) {
+        log.error(`Failed to create variable Neutral Scale Alpha/${i + 1}: ${error}`, 'color-system', 'createPrimitiveVariables');
+      }
+    }
 
-    // Create success color scales
-    await Promise.all(successTheme.accentScale.map((color, index) => 
-      createOrUpdateColorVariable(collection, modeId, `Success Scale/${index + 1}`, color)
-    ));
+    // Create success color scales - direct API calls
+    for (let i = 0; i < successTheme.accentScale.length; i++) {
+      try {
+        const variable = figma.variables.createVariable(`Success Scale/${i + 1}`, collection, "COLOR");
+        log.success(`Created variable: Success Scale/${i + 1}`, 'color-system', 'createPrimitiveVariables');
+      } catch (error) {
+        log.error(`Failed to create variable Success Scale/${i + 1}: ${error}`, 'color-system', 'createPrimitiveVariables');
+      }
+    }
 
-    await Promise.all(successTheme.accentScaleAlpha.map((color, index) => 
-      createOrUpdateColorVariable(collection, modeId, `Success Scale Alpha/${index + 1}`, color)
-    ));
+    for (let i = 0; i < successTheme.accentScaleAlpha.length; i++) {
+      try {
+        const variable = figma.variables.createVariable(`Success Scale Alpha/${i + 1}`, collection, "COLOR");
+        log.success(`Created variable: Success Scale Alpha/${i + 1}`, 'color-system', 'createPrimitiveVariables');
+      } catch (error) {
+        log.error(`Failed to create variable Success Scale Alpha/${i + 1}: ${error}`, 'color-system', 'createPrimitiveVariables');
+      }
+    }
 
-    await createOrUpdateColorVariable(collection, modeId, `Success Contrast/1`, successTheme.accentContrast);
+    try {
+      const variable = figma.variables.createVariable(`Success Contrast/1`, collection, "COLOR");
+      log.success(`Created variable: Success Contrast/1`, 'color-system', 'createPrimitiveVariables');
+    } catch (error) {
+      log.error(`Failed to create variable Success Contrast/1: ${error}`, 'color-system', 'createPrimitiveVariables');
+    }
 
-    // Create error color scales
-    await Promise.all(errorTheme.accentScale.map((color, index) => 
-      createOrUpdateColorVariable(collection, modeId, `Error Scale/${index + 1}`, color)
-    ));
+    // Create error color scales - direct API calls
+    for (let i = 0; i < errorTheme.accentScale.length; i++) {
+      try {
+        const variable = figma.variables.createVariable(`Error Scale/${i + 1}`, collection, "COLOR");
+        log.success(`Created variable: Error Scale/${i + 1}`, 'color-system', 'createPrimitiveVariables');
+      } catch (error) {
+        log.error(`Failed to create variable Error Scale/${i + 1}: ${error}`, 'color-system', 'createPrimitiveVariables');
+      }
+    }
 
-    await Promise.all(errorTheme.accentScaleAlpha.map((color, index) => 
-      createOrUpdateColorVariable(collection, modeId, `Error Scale Alpha/${index + 1}`, color)
-    ));
+    for (let i = 0; i < errorTheme.accentScaleAlpha.length; i++) {
+      try {
+        const variable = figma.variables.createVariable(`Error Scale Alpha/${i + 1}`, collection, "COLOR");
+        log.success(`Created variable: Error Scale Alpha/${i + 1}`, 'color-system', 'createPrimitiveVariables');
+      } catch (error) {
+        log.error(`Failed to create variable Error Scale Alpha/${i + 1}: ${error}`, 'color-system', 'createPrimitiveVariables');
+      }
+    }
 
-    await createOrUpdateColorVariable(collection, modeId, `Error Contrast/1`, errorTheme.accentContrast);
+    try {
+      const variable = figma.variables.createVariable(`Error Contrast/1`, collection, "COLOR");
+      log.success(`Created variable: Error Contrast/1`, 'color-system', 'createPrimitiveVariables');
+    } catch (error) {
+      log.error(`Failed to create variable Error Contrast/1: ${error}`, 'color-system', 'createPrimitiveVariables');
+    }
 
     log.success('Primitive variables created successfully', 'color-system', 'createPrimitiveVariables');
   } catch (error) {
