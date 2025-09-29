@@ -459,7 +459,8 @@ export async function testFunction(): Promise<string> {
  */
 export async function createOrUpdateColorVariable(collection: VariableCollection, modeId: string, name: string, colorHex: string): Promise<Variable | null> {
   log.info(`🚀 FUNCTION CALLED: createOrUpdateColorVariable for ${name}`, 'figma-api', 'createOrUpdateColorVariable');
-  log.info(`Parameters: collection=${collection.id}, modeId=${modeId}, name=${name}, colorHex=${colorHex}`, 'figma-api', 'createOrUpdateColorVariable');
+  log.info(`Parameters: collection=${collection?.id}, modeId=${modeId}, name=${name}, colorHex=${colorHex}`, 'figma-api', 'createOrUpdateColorVariable');
+  log.info(`Parameter types: collection=${typeof collection}, modeId=${typeof modeId}, name=${typeof name}, colorHex=${typeof colorHex}`, 'figma-api', 'createOrUpdateColorVariable');
   
   try {
     log.info(`Step 1: Finding existing variable for ${name}`, 'figma-api', 'createOrUpdateColorVariable');
