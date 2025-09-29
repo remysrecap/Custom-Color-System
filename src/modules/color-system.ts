@@ -489,9 +489,16 @@ export async function createDirectVariables(
     log.info(`Neutral theme accentScale[1]: ${neutralTheme.accentScale[1]}`, 'color-system', 'createDirectVariables');
     log.info(`Brand theme accentScale[1]: ${brandTheme.accentScale[1]}`, 'color-system', 'createDirectVariables');
     
-    // Surface variables
+    // Test if createOrUpdateColorVariable is available
+    log.info(`createOrUpdateColorVariable function available: ${typeof createOrUpdateColorVariable}`, 'color-system', 'createDirectVariables');
+    
+    // Surface variables - test one at a time
+    log.info(`About to call createOrUpdateColorVariable for surface/sf-neutral-primary`, 'color-system', 'createDirectVariables');
+    const result1 = await createOrUpdateColorVariable(collection, modeId, "surface/sf-neutral-primary", brandTheme.background);
+    log.info(`Result for surface/sf-neutral-primary: ${result1 ? 'SUCCESS' : 'FAILED'}`, 'color-system', 'createDirectVariables');
+    
+    // Continue with the rest
     await Promise.all([
-      createOrUpdateColorVariable(collection, modeId, "surface/sf-neutral-primary", brandTheme.background),
       createOrUpdateColorVariable(collection, modeId, "surface/sf-neutral-secondary", neutralTheme.accentScale[1]),
       createOrUpdateColorVariable(collection, modeId, "surface/sf-brand-primary", brandTheme.accentScale[1]),
       createOrUpdateColorVariable(collection, modeId, "surface/sf-brand-primary-emphasized", brandTheme.accentScale[2]),
