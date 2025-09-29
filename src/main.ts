@@ -242,20 +242,20 @@ async function createPrimitiveSystem(
     
     // Create demo components if enabled
     if (exportDemo) {
-      log('Creating demo components...', 'info');
+      log.info('Creating demo components...', 'main', 'createPrimitiveSystem');
       // Import demo creation functions
       const { exportDemoComponents } = await import('./modules/demo-system');
       await exportDemoComponents(primitiveCollection, semanticCollection);
-      log('Demo components created successfully', 'success');
+      log.success('Demo components created successfully', 'main', 'createPrimitiveSystem');
     }
     
     // Create documentation if enabled
     if (exportDocumentation) {
-      log('Creating documentation...', 'info');
+      log.info('Creating documentation...', 'main', 'createPrimitiveSystem');
       // Import documentation creation functions
       const { exportDocumentation } = await import('./modules/documentation-system');
       await exportDocumentation(primitiveCollection, semanticCollection);
-      log('Documentation created successfully', 'success');
+      log.success('Documentation created successfully', 'main', 'createPrimitiveSystem');
     }
     
   } catch (error) {
@@ -308,20 +308,20 @@ async function createDirectSystem(
     
     // Create demo components if enabled
     if (exportDemo) {
-      log('Creating demo components...', 'info');
+      log.info('Creating demo components...', 'main', 'createDirectSystem');
       // Import demo creation functions
       const { exportDemoComponents } = await import('./modules/demo-system');
       await exportDemoComponents(collection);
-      log('Demo components created successfully', 'success');
+      log.success('Demo components created successfully', 'main', 'createDirectSystem');
     }
     
     // Create documentation if enabled
     if (exportDocumentation) {
-      log('Creating documentation...', 'info');
+      log.info('Creating documentation...', 'main', 'createDirectSystem');
       // Import documentation creation functions
       const { exportDocumentation } = await import('./modules/documentation-system');
       await exportDocumentation(collection);
-      log('Documentation created successfully', 'success');
+      log.success('Documentation created successfully', 'main', 'createDirectSystem');
     }
     
   } catch (error) {
