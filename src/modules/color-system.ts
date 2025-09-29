@@ -266,7 +266,7 @@ export async function createOrUpdateContrastColorVariable(
 /**
  * Creates primitive color variables
  */
-// Helper function to create or update variable with color value
+// Helper function to create variable with color value (simplified)
 async function createVariableWithColor(
   collection: VariableCollection,
   modeId: string,
@@ -274,22 +274,9 @@ async function createVariableWithColor(
   colorHex: string
 ): Promise<void> {
   try {
-    // Check if variable already exists by getting all variables in the collection
-    const existingVariables = await Promise.all(
-      collection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
-    );
-    const existingVariable = existingVariables.find(v => v && v.name === name);
-    
-    let variable: Variable;
-    if (existingVariable) {
-      // Update existing variable
-      variable = existingVariable;
-      log.info(`Updating existing variable: ${name}`, 'color-system', 'createPrimitiveVariables');
-    } else {
-      // Create new variable
-      variable = figma.variables.createVariable(name, collection, "COLOR");
-      log.info(`Creating new variable: ${name}`, 'color-system', 'createPrimitiveVariables');
-    }
+    // Create new variable directly (let Figma handle duplicates)
+    const variable = figma.variables.createVariable(name, collection, "COLOR");
+    log.info(`Creating variable: ${name}`, 'color-system', 'createPrimitiveVariables');
     
     // Convert hex to RGBA and set the value
     const hex = colorHex.replace('#', '');
@@ -300,7 +287,7 @@ async function createVariableWithColor(
     variable.setValueForMode(modeId, rgba);
     log.success(`Set variable: ${name} with color ${colorHex} for mode ${modeId}`, 'color-system', 'createPrimitiveVariables');
   } catch (error) {
-    log.error(`Failed to create/update variable ${name}: ${error}`, 'color-system', 'createPrimitiveVariables');
+    log.error(`Failed to create variable ${name}: ${error}`, 'color-system', 'createPrimitiveVariables');
   }
 }
 
