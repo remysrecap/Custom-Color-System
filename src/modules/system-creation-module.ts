@@ -138,13 +138,23 @@ export class SystemCreationModule {
       // Create only semantic collection
       const semanticCollection = await createVariableCollection(`SCS Semantic ${versionNumber}`);
       
-      // Create semantic variables with direct hex values (no modes)
+      // Create semantic variables with direct hex values for both light and dark modes
       const lightMode = semanticCollection.modes[0];
-      semanticCollection.renameMode(lightMode.modeId, "Mode");
+      semanticCollection.renameMode(lightMode.modeId, "Light");
       
-      // Create semantic variables with flattened hex values (no variable references)
+      // Create light mode semantic variables with flattened hex values
       await this.createFlattenedSemanticVariables(semanticCollection, lightMode.modeId, 
         themes.lightBrandTheme, themes.lightNeutralTheme, themes.lightSuccessTheme, themes.lightErrorTheme);
+      
+      // Create dark mode if needed
+      if (appearance === "dark" || appearance === "both") {
+        const darkModeId = appearance === "both" ? 
+          semanticCollection.addMode("Dark") : lightMode.modeId;
+        
+        // Create dark mode semantic variables with flattened hex values
+        await this.createFlattenedSemanticVariables(semanticCollection, darkModeId, 
+          themes.darkBrandTheme, themes.darkNeutralTheme, themes.darkSuccessTheme, themes.darkErrorTheme);
+      }
       
       log.success('Semantic-only system created successfully', 'system-creation-module', 'createSemanticOnlySystem');
       
