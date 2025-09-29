@@ -324,7 +324,15 @@ export async function createPrimitiveVariables(
       await createVariableWithColor(collection, modeId, `Brand Scale Alpha/${i + 1}`, brandTheme.accentScaleAlpha[i]);
     }
 
-    await createVariableWithColor(collection, modeId, `Brand Contrast/1`, brandTheme.accentContrast);
+    // Handle Brand Contrast - check if it's a valid hex color
+    const contrastColor = brandTheme.accentContrast;
+    if (contrastColor && typeof contrastColor === 'string' && contrastColor.startsWith('#')) {
+      await createVariableWithColor(collection, modeId, `Brand Contrast/1`, contrastColor);
+    } else {
+      // Fallback to a safe contrast color
+      log.warn(`Invalid contrast color: ${contrastColor}, using fallback`, 'color-system', 'createPrimitiveVariables');
+      await createVariableWithColor(collection, modeId, `Brand Contrast/1`, '#000000');
+    }
 
     // Create neutral color scales
     for (let i = 0; i < neutralTheme.accentScale.length; i++) {
@@ -344,7 +352,14 @@ export async function createPrimitiveVariables(
       await createVariableWithColor(collection, modeId, `Success Scale Alpha/${i + 1}`, successTheme.accentScaleAlpha[i]);
     }
 
-    await createVariableWithColor(collection, modeId, `Success Contrast/1`, successTheme.accentContrast);
+    // Handle Success Contrast
+    const successContrastColor = successTheme.accentContrast;
+    if (successContrastColor && typeof successContrastColor === 'string' && successContrastColor.startsWith('#')) {
+      await createVariableWithColor(collection, modeId, `Success Contrast/1`, successContrastColor);
+    } else {
+      log.warn(`Invalid success contrast color: ${successContrastColor}, using fallback`, 'color-system', 'createPrimitiveVariables');
+      await createVariableWithColor(collection, modeId, `Success Contrast/1`, '#000000');
+    }
 
     // Create error color scales
     for (let i = 0; i < errorTheme.accentScale.length; i++) {
@@ -355,7 +370,14 @@ export async function createPrimitiveVariables(
       await createVariableWithColor(collection, modeId, `Error Scale Alpha/${i + 1}`, errorTheme.accentScaleAlpha[i]);
     }
 
-    await createVariableWithColor(collection, modeId, `Error Contrast/1`, errorTheme.accentContrast);
+    // Handle Error Contrast
+    const errorContrastColor = errorTheme.accentContrast;
+    if (errorContrastColor && typeof errorContrastColor === 'string' && errorContrastColor.startsWith('#')) {
+      await createVariableWithColor(collection, modeId, `Error Contrast/1`, errorContrastColor);
+    } else {
+      log.warn(`Invalid error contrast color: ${errorContrastColor}, using fallback`, 'color-system', 'createPrimitiveVariables');
+      await createVariableWithColor(collection, modeId, `Error Contrast/1`, '#000000');
+    }
 
     // Create additional primitive variables that semantic variables reference
     await createVariableWithColor(collection, modeId, `Background/1`, brandTheme.background);
