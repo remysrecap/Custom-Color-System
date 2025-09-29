@@ -230,8 +230,25 @@ async function createPrimitiveSystem(
       log.success('Dark mode primitive variables created', 'main', 'createPrimitiveSystem');
     }
     
-    // Create semantic variables
+    // CRITICAL: Wait for primitive variables to be fully committed before creating semantic variables
+    log.info('Waiting for primitive variables to be fully committed...', 'main', 'createPrimitiveSystem');
+    await new Promise(resolve => setTimeout(resolve, 500)); // Give Figma time to commit primitive variables
+    
+    // Verify primitive variables exist before creating semantic variables
+    log.info('Verifying primitive variables are available...', 'main', 'createPrimitiveSystem');
+    const primitiveVariables = await Promise.all(
+      primitiveCollection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
+    );
+    log.info(`Found ${primitiveVariables.length} primitive variables`, 'main', 'createPrimitiveSystem');
+    
+    // Create semantic variables ONLY after primitives are confirmed to exist
+    log.info('Creating semantic variables...', 'main', 'createPrimitiveSystem');
     await createSemanticVariables(semanticCollection, primitiveCollection, appearance);
+    log.success('Semantic variables created successfully', 'main', 'createPrimitiveSystem');
+    
+    // Wait for semantic variables to be fully committed
+    log.info('Waiting for semantic variables to be fully committed...', 'main', 'createPrimitiveSystem');
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     // Create font system if enabled
     if (includeFontSystem) {
