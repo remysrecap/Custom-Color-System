@@ -478,9 +478,9 @@ async function createSemanticVariablesForMode(
           });
           log.success(`Semantic variable ${semanticName} created with alias to primitive ${primitiveName}`, 'color-system', 'createSemanticVar');
         } else {
-          log.warn(`Primitive variable not found: ${primitiveName}, creating fallback`, 'color-system', 'createSemanticVar');
-          const fallbackColor = { r: 0, g: 0, b: 0, a: 1 };
-          await variable.setValueForMode(modeId, fallbackColor);
+          log.error(`Primitive variable not found: ${primitiveName}`, 'color-system', 'createSemanticVar');
+          // Don't create fallback - this indicates a serious issue
+          throw new Error(`Primitive variable not found: ${primitiveName}`);
         }
         return variable;
       } catch (error) {
