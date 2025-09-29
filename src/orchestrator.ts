@@ -62,6 +62,9 @@ export class PluginOrchestrator {
     try {
       log.info('Initializing all modules', 'orchestrator', 'initializeModules');
       
+      // Setup the plugin UI first
+      this.setupPluginUI();
+      
       // UI module is already initialized in constructor
       // Documentation module is already initialized in constructor
       // Demo module is already initialized in constructor
@@ -69,6 +72,31 @@ export class PluginOrchestrator {
       log.success('All modules initialized', 'orchestrator', 'initializeModules');
     } catch (error) {
       logError('Failed to initialize modules', error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sets up the plugin UI
+   */
+  private setupPluginUI(): void {
+    try {
+      log.info('Setting up plugin UI', 'orchestrator', 'setupPluginUI');
+      
+      figma.showUI(__html__);
+      figma.ui.resize(400, 600);
+      
+      // Send capability info to UI
+      const { checkMultipleModesSupport } = require('./modules/figma-api');
+      const supportsMultipleModes = checkMultipleModesSupport();
+      figma.ui.postMessage({ 
+        type: 'capability-check',
+        supportsMultipleModes 
+      });
+      
+      log.success('Plugin UI setup complete', 'orchestrator', 'setupPluginUI');
+    } catch (error) {
+      logError('Failed to setup plugin UI', error as Error);
       throw error;
     }
   }
@@ -104,33 +132,13 @@ export class PluginOrchestrator {
     try {
       log.info(`Handling message: ${msg.type}`, 'orchestrator', 'handleMessage');
       
-      switch (msg.type) {
-        case 'generate-palette':
-          await this.handleGeneratePalette(msg);
-          break;
-          
-        case 'test-gt-standard':
-          await this.handleTestGTStandard();
-          break;
-          
-        case 'discover-gt-standard':
-          await this.handleDiscoverGTStandard();
-          break;
-          
-        case 'update-font-mode':
-          await this.handleUpdateFontMode(msg);
-          break;
-          
-        case 'bind-font-variables':
-          await this.handleBindFontVariables();
-          break;
-          
-        default:
-          log.warn(`Unknown message type: ${msg.type}`, 'orchestrator', 'handleMessage');
-      }
+      // Delegate to UI module for proper message handling
+      await this.uiModule.handleMessage(msg);
+      
     } catch (error) {
       logError(`Failed to handle message: ${msg.type}`, error as Error);
-      throw error;
+      this.uiModule.showNotification('An error occurred while processing your request.', 'error');
+      this.uiModule.sendMessage('complete');
     }
   }
 
