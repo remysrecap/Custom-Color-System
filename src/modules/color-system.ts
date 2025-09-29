@@ -102,6 +102,19 @@ export function generateColorThemes(
     background: "#1C1C1C"
   });
 
+  // Debug: Log dark theme colors to verify they're different from light
+  log.info(`🔍 DARK THEME DEBUG:`, 'color-system', 'generateColorThemes');
+  log.info(`Dark Brand Scale[1]: ${darkBrandTheme.accentScale[1]}`, 'color-system', 'generateColorThemes');
+  log.info(`Dark Brand Scale[9]: ${darkBrandTheme.accentScale[9]}`, 'color-system', 'generateColorThemes');
+  log.info(`Dark Neutral Scale[1]: ${darkNeutralTheme.accentScale[1]}`, 'color-system', 'generateColorThemes');
+  log.info(`Dark Background: ${darkBrandTheme.background}`, 'color-system', 'generateColorThemes');
+  
+  log.info(`🔍 LIGHT THEME DEBUG:`, 'color-system', 'generateColorThemes');
+  log.info(`Light Brand Scale[1]: ${lightBrandTheme.accentScale[1]}`, 'color-system', 'generateColorThemes');
+  log.info(`Light Brand Scale[9]: ${lightBrandTheme.accentScale[9]}`, 'color-system', 'generateColorThemes');
+  log.info(`Light Neutral Scale[1]: ${lightNeutralTheme.accentScale[1]}`, 'color-system', 'generateColorThemes');
+  log.info(`Light Background: ${lightBrandTheme.background}`, 'color-system', 'generateColorThemes');
+
   return {
     lightBrandTheme,
     lightNeutralTheme,
@@ -444,21 +457,29 @@ async function createSemanticVariablesForMode(
     async function createSemanticVar(semanticName: string, primitiveName: string): Promise<Variable> {
       log.info(`Creating semantic variable: ${semanticName} from primitive: ${primitiveName}`, 'color-system', 'createSemanticVar');
       
-      const variable = figma.variables.createVariable(semanticName, semanticCollection, "COLOR");
-      const primitiveVarId = await findExistingVariable(primitiveCollection, primitiveName);
+      try {
+        const variable = figma.variables.createVariable(semanticName, semanticCollection, "COLOR");
+        const primitiveVarId = await findExistingVariable(primitiveCollection, primitiveName);
 
-      if (primitiveVarId) {
-        await variable.setValueForMode(modeId, {
-          type: "VARIABLE_ALIAS",
-          id: primitiveVarId
-        });
-        log.success(`Semantic variable ${semanticName} created with alias to primitive ${primitiveName}`, 'color-system', 'createSemanticVar');
-      } else {
-        log.warn(`Primitive variable not found: ${primitiveName}, creating fallback`, 'color-system', 'createSemanticVar');
-        const fallbackColor = { r: 0, g: 0, b: 0, a: 1 };
-        await variable.setValueForMode(modeId, fallbackColor);
+        if (primitiveVarId) {
+          await variable.setValueForMode(modeId, {
+            type: "VARIABLE_ALIAS",
+            id: primitiveVarId
+          });
+          log.success(`Semantic variable ${semanticName} created with alias to primitive ${primitiveName}`, 'color-system', 'createSemanticVar');
+        } else {
+          log.warn(`Primitive variable not found: ${primitiveName}, creating fallback`, 'color-system', 'createSemanticVar');
+          const fallbackColor = { r: 0, g: 0, b: 0, a: 1 };
+          await variable.setValueForMode(modeId, fallbackColor);
+        }
+        return variable;
+      } catch (error) {
+        log.error(`Failed to create semantic variable ${semanticName}: ${error}`, 'color-system', 'createSemanticVar');
+        // Create a fallback variable instead of throwing
+        const fallbackVariable = figma.variables.createVariable(semanticName, semanticCollection, "COLOR");
+        await fallbackVariable.setValueForMode(modeId, { r: 0, g: 0, b: 0, a: 1 });
+        return fallbackVariable;
       }
-      return variable;
     }
 
     // Helper function to create hardcoded variable
@@ -472,14 +493,20 @@ async function createSemanticVariablesForMode(
     }
 
     // Create surface variables
-    await Promise.all([
-      createSemanticVar("surface/sf-neutral-primary", "Background/1"),
-      createSemanticVar("surface/sf-neutral-secondary", "Neutral Scale/2"),
-      createSemanticVar("surface/sf-brand-primary", "Brand Scale/2"),
-      createSemanticVar("surface/sf-brand-primary-emphasized", "Brand Scale/3"),
-      createSemanticVar("surface/sf-shadow", "Neutral Scale Alpha/4"),
-      createHardcodedVar("surface/sf-overlay", { r: 0, g: 0, b: 0, a: 0.65 })
-    ]);
+    try {
+      await Promise.all([
+        createSemanticVar("surface/sf-neutral-primary", "Background/1"),
+        createSemanticVar("surface/sf-neutral-secondary", "Neutral Scale/2"),
+        createSemanticVar("surface/sf-brand-primary", "Brand Scale/2"),
+        createSemanticVar("surface/sf-brand-primary-emphasized", "Brand Scale/3"),
+        createSemanticVar("surface/sf-shadow", "Neutral Scale Alpha/4"),
+        createHardcodedVar("surface/sf-overlay", { r: 0, g: 0, b: 0, a: 0.65 })
+      ]);
+      log.success('Surface variables created successfully', 'color-system', 'createSemanticVariablesForMode');
+    } catch (error) {
+      log.error(`Failed to create surface variables: ${error}`, 'color-system', 'createSemanticVariablesForMode');
+      // Continue with other variables instead of failing completely
+    }
 
     // Get accessibility variable ID with fallback to brand9
     const accessibilityVarId = await findExistingVariable(primitiveCollection, "Accessibility/1");
@@ -487,48 +514,66 @@ async function createSemanticVariablesForMode(
     const linkVarId = accessibilityVarId || brand9VarId;
 
     // Create text & icon variables (skip contrast variables for now)
-    await Promise.all([
-      createSemanticVar("text-icon/ti-neutral-primary", "Neutral Scale/12"),
-      createSemanticVar("text-icon/ti-neutral-secondary", "Neutral Scale/11"),
-      createSemanticVar("text-icon/ti-brand-primary", linkVarId ? "Accessibility/1" : "Brand Scale/9"),
-      // Skip contrast variables for now - they're causing issues
-      // createSemanticVar("text-icon/ti-on-bg-brand-primary", "Brand Contrast/1"),
-      createSemanticVar("text-icon/ti-on-bg-brand-primary-subtle", "Brand Scale/11"),
-      // createSemanticVar("text-icon/ti-on-bg-error", "Error Contrast/1"),
-      createSemanticVar("text-icon/ti-on-bg-error-subtle", "Error Scale/11"),
-      // createSemanticVar("text-icon/ti-on-bg-success", "Success Contrast/1"),
-      createSemanticVar("text-icon/ti-on-bg-success-subtle", "Success Scale/11"),
-      createHardcodedVar("text-icon/ti-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
-    ]);
+    try {
+      await Promise.all([
+        createSemanticVar("text-icon/ti-neutral-primary", "Neutral Scale/12"),
+        createSemanticVar("text-icon/ti-neutral-secondary", "Neutral Scale/11"),
+        createSemanticVar("text-icon/ti-brand-primary", linkVarId ? "Accessibility/1" : "Brand Scale/9"),
+        // Skip contrast variables for now - they're causing issues
+        // createSemanticVar("text-icon/ti-on-bg-brand-primary", "Brand Contrast/1"),
+        createSemanticVar("text-icon/ti-on-bg-brand-primary-subtle", "Brand Scale/11"),
+        // createSemanticVar("text-icon/ti-on-bg-error", "Error Contrast/1"),
+        createSemanticVar("text-icon/ti-on-bg-error-subtle", "Error Scale/11"),
+        // createSemanticVar("text-icon/ti-on-bg-success", "Success Contrast/1"),
+        createSemanticVar("text-icon/ti-on-bg-success-subtle", "Success Scale/11"),
+        createHardcodedVar("text-icon/ti-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
+      ]);
+      log.success('Text & icon variables created successfully', 'color-system', 'createSemanticVariablesForMode');
+    } catch (error) {
+      log.error(`Failed to create text & icon variables: ${error}`, 'color-system', 'createSemanticVariablesForMode');
+      // Continue with other variables instead of failing completely
+    }
 
     // Create background variables
-    await Promise.all([
-      createSemanticVar("background/bg-brand-primary", "Brand Scale/9"),
-      createSemanticVar("background/bg-brand-primary-emphasized", "Brand Scale/10"),
-      createSemanticVar("background/bg-brand-primary-subtle", "Brand Scale/3"),
-      createSemanticVar("background/bg-brand-primary-subtle-emphasized", "Brand Scale/4"),
-      createSemanticVar("background/bg-brand-primary-overlay", "Brand Scale Alpha/6"),
-      createSemanticVar("background/bg-error", "Error Scale/9"),
-      createSemanticVar("background/bg-error-emphasized", "Error Scale/10"),
-      createSemanticVar("background/bg-error-subtle", "Error Scale/3"),
-      createSemanticVar("background/bg-error-subtle-emphasized", "Error Scale/4"),
-      createSemanticVar("background/bg-success", "Success Scale/9"),
-      createSemanticVar("background/bg-success-emphasized", "Success Scale/10"),
-      createSemanticVar("background/bg-success-subtle", "Success Scale/3"),
-      createSemanticVar("background/bg-success-subtle-emphasized", "Success Scale/4")
-    ]);
+    try {
+      await Promise.all([
+        createSemanticVar("background/bg-brand-primary", "Brand Scale/9"),
+        createSemanticVar("background/bg-brand-primary-emphasized", "Brand Scale/10"),
+        createSemanticVar("background/bg-brand-primary-subtle", "Brand Scale/3"),
+        createSemanticVar("background/bg-brand-primary-subtle-emphasized", "Brand Scale/4"),
+        createSemanticVar("background/bg-brand-primary-overlay", "Brand Scale Alpha/6"),
+        createSemanticVar("background/bg-error", "Error Scale/9"),
+        createSemanticVar("background/bg-error-emphasized", "Error Scale/10"),
+        createSemanticVar("background/bg-error-subtle", "Error Scale/3"),
+        createSemanticVar("background/bg-error-subtle-emphasized", "Error Scale/4"),
+        createSemanticVar("background/bg-success", "Success Scale/9"),
+        createSemanticVar("background/bg-success-emphasized", "Success Scale/10"),
+        createSemanticVar("background/bg-success-subtle", "Success Scale/3"),
+        createSemanticVar("background/bg-success-subtle-emphasized", "Success Scale/4")
+      ]);
+      log.success('Background variables created successfully', 'color-system', 'createSemanticVariablesForMode');
+    } catch (error) {
+      log.error(`Failed to create background variables: ${error}`, 'color-system', 'createSemanticVariablesForMode');
+      // Continue with other variables instead of failing completely
+    }
 
     // Create border variables (missing from our refactored version!)
-    await Promise.all([
-      createSemanticVar("border/br-with-sf-neutral-primary", "Neutral Scale/6"),
-      createSemanticVar("border/br-with-sf-neutral-secondary", "Neutral Scale/7"),
-      createSemanticVar("border/br-with-bg-brand-primary", "Brand Scale/10"),
-      createSemanticVar("border/br-with-bg-brand-primary-subtle", "Brand Scale/7"),
-      createSemanticVar("border/br-with-bg-success", "Success Scale/10"),
-      createSemanticVar("border/br-with-bg-success-subtle", "Success Scale/7"),
-      createSemanticVar("border/br-with-bg-error", "Error Scale/10"),
-      createSemanticVar("border/br-with-bg-error-subtle", "Error Scale/7")
-    ]);
+    try {
+      await Promise.all([
+        createSemanticVar("border/br-with-sf-neutral-primary", "Neutral Scale/6"),
+        createSemanticVar("border/br-with-sf-neutral-secondary", "Neutral Scale/7"),
+        createSemanticVar("border/br-with-bg-brand-primary", "Brand Scale/10"),
+        createSemanticVar("border/br-with-bg-brand-primary-subtle", "Brand Scale/7"),
+        createSemanticVar("border/br-with-bg-success", "Success Scale/10"),
+        createSemanticVar("border/br-with-bg-success-subtle", "Success Scale/7"),
+        createSemanticVar("border/br-with-bg-error", "Error Scale/10"),
+        createSemanticVar("border/br-with-bg-error-subtle", "Error Scale/7")
+      ]);
+      log.success('Border variables created successfully', 'color-system', 'createSemanticVariablesForMode');
+    } catch (error) {
+      log.error(`Failed to create border variables: ${error}`, 'color-system', 'createSemanticVariablesForMode');
+      // Continue with other variables instead of failing completely
+    }
 
     log.success(`Semantic variables created successfully for mode: ${modeId}`, 'color-system', 'createSemanticVariablesForMode');
   } catch (error) {
