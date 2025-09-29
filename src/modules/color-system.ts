@@ -299,6 +299,9 @@ async function createVariableWithColor(
     const rgba: RGBA = { r, g, b, a: 1 };
     variable.setValueForMode(modeId, rgba);
     log.success(`Set variable: ${name} with color ${colorHex} for mode ${modeId}`, 'color-system', 'createPrimitiveVariables');
+    
+    // Debug: Log the actual RGBA values being set
+    log.info(`🔍 SETTING ${name}: ${colorHex} -> RGBA(${rgba.r}, ${rgba.g}, ${rgba.b}, ${rgba.a}) for mode ${modeId}`, 'color-system', 'createPrimitiveVariables');
   } catch (error) {
     log.error(`Failed to create variable ${name}: ${error}`, 'color-system', 'createPrimitiveVariables');
   }
@@ -313,6 +316,13 @@ export async function createPrimitiveVariables(
   errorTheme: RadixTheme
 ): Promise<void> {
   log.info(`Creating primitive variables for mode: ${modeId}`, 'color-system', 'createPrimitiveVariables');
+  
+  // Debug: Log the actual colors being used for this mode
+  log.info(`🔍 MODE ${modeId} COLORS:`, 'color-system', 'createPrimitiveVariables');
+  log.info(`Brand Scale[1]: ${brandTheme.accentScale[1]}`, 'color-system', 'createPrimitiveVariables');
+  log.info(`Brand Scale[9]: ${brandTheme.accentScale[9]}`, 'color-system', 'createPrimitiveVariables');
+  log.info(`Neutral Scale[1]: ${neutralTheme.accentScale[1]}`, 'color-system', 'createPrimitiveVariables');
+  log.info(`Background: ${brandTheme.background}`, 'color-system', 'createPrimitiveVariables');
   
   try {
     // Create brand color scales

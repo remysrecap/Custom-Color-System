@@ -236,10 +236,15 @@ async function createPrimitiveSystem(
     
     // Verify primitive variables exist before creating semantic variables
     log.info('Verifying primitive variables are available...', 'main', 'createPrimitiveSystem');
-    const primitiveVariables = await Promise.all(
-      primitiveCollection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
-    );
-    log.info(`Found ${primitiveVariables.length} primitive variables`, 'main', 'createPrimitiveSystem');
+    try {
+      const primitiveVariables = await Promise.all(
+        primitiveCollection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
+      );
+      log.info(`Found ${primitiveVariables.length} primitive variables`, 'main', 'createPrimitiveSystem');
+    } catch (error) {
+      log.error(`Failed to verify primitive variables: ${error}`, 'main', 'createPrimitiveSystem');
+      // Continue anyway - don't let verification failure stop the process
+    }
     
     // Create semantic variables ONLY after primitives are confirmed to exist
     log.info('Creating semantic variables...', 'main', 'createPrimitiveSystem');
