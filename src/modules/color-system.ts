@@ -497,13 +497,14 @@ export async function createDirectVariables(
     const testResult = await testFunction();
     log.info(`Test function result: ${testResult}`, 'color-system', 'createDirectVariables');
     
-    // Test direct function call with minimal parameters
-    log.info(`About to call createOrUpdateColorVariable for surface/sf-neutral-primary`, 'color-system', 'createDirectVariables');
+    // Test direct Figma API call without function wrapper
+    log.info(`Testing direct Figma API call for surface/sf-neutral-primary`, 'color-system', 'createDirectVariables');
     try {
-      const result1 = await createOrUpdateColorVariable(collection, modeId, "surface/sf-neutral-primary", brandTheme.background);
-      log.info(`Result for surface/sf-neutral-primary: ${result1 ? 'SUCCESS' : 'FAILED'}`, 'color-system', 'createDirectVariables');
+      log.info(`Creating variable directly with figma.variables.createVariable`, 'color-system', 'createDirectVariables');
+      const variable = figma.variables.createVariable("surface/sf-neutral-primary", collection, "COLOR");
+      log.success(`Direct API call successful: ${variable.id}`, 'color-system', 'createDirectVariables');
     } catch (error) {
-      log.error(`Direct function call error: ${error}`, 'color-system', 'createDirectVariables');
+      log.error(`Direct API call error: ${error}`, 'color-system', 'createDirectVariables');
     }
     
     // Continue with the rest
