@@ -274,8 +274,11 @@ async function createVariableWithColor(
   colorHex: string
 ): Promise<void> {
   try {
-    // Check if variable already exists
-    const existingVariable = collection.variables.find(v => v.name === name);
+    // Check if variable already exists by getting all variables in the collection
+    const existingVariables = await Promise.all(
+      collection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
+    );
+    const existingVariable = existingVariables.find(v => v && v.name === name);
     
     let variable: Variable;
     if (existingVariable) {
