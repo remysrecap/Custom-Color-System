@@ -483,6 +483,11 @@ export async function createDirectVariables(
   log.info(`Creating direct variables for mode: ${modeId}`, 'color-system', 'createDirectVariables');
   
   try {
+    // Debug: Log the Radix theme values
+    log.info(`Brand theme background: ${brandTheme.background}`, 'color-system', 'createDirectVariables');
+    log.info(`Neutral theme accentScale[1]: ${neutralTheme.accentScale[1]}`, 'color-system', 'createDirectVariables');
+    log.info(`Brand theme accentScale[1]: ${brandTheme.accentScale[1]}`, 'color-system', 'createDirectVariables');
+    
     // Surface variables
     await Promise.all([
       createOrUpdateColorVariable(collection, modeId, "surface/sf-neutral-primary", brandTheme.background),
