@@ -486,16 +486,17 @@ async function createSemanticVariablesForMode(
     const brand9VarId = await findExistingVariable(primitiveCollection, "Brand Scale/9");
     const linkVarId = accessibilityVarId || brand9VarId;
 
-    // Create text & icon variables
+    // Create text & icon variables (skip contrast variables for now)
     await Promise.all([
       createSemanticVar("text-icon/ti-neutral-primary", "Neutral Scale/12"),
       createSemanticVar("text-icon/ti-neutral-secondary", "Neutral Scale/11"),
       createSemanticVar("text-icon/ti-brand-primary", linkVarId ? "Accessibility/1" : "Brand Scale/9"),
-      createSemanticVar("text-icon/ti-on-bg-brand-primary", "Brand Contrast/1"),
+      // Skip contrast variables for now - they're causing issues
+      // createSemanticVar("text-icon/ti-on-bg-brand-primary", "Brand Contrast/1"),
       createSemanticVar("text-icon/ti-on-bg-brand-primary-subtle", "Brand Scale/11"),
-      createSemanticVar("text-icon/ti-on-bg-error", "Error Contrast/1"),
+      // createSemanticVar("text-icon/ti-on-bg-error", "Error Contrast/1"),
       createSemanticVar("text-icon/ti-on-bg-error-subtle", "Error Scale/11"),
-      createSemanticVar("text-icon/ti-on-bg-success", "Success Contrast/1"),
+      // createSemanticVar("text-icon/ti-on-bg-success", "Success Contrast/1"),
       createSemanticVar("text-icon/ti-on-bg-success-subtle", "Success Scale/11"),
       createHardcodedVar("text-icon/ti-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
     ]);
@@ -515,6 +516,18 @@ async function createSemanticVariablesForMode(
       createSemanticVar("background/bg-success-emphasized", "Success Scale/10"),
       createSemanticVar("background/bg-success-subtle", "Success Scale/3"),
       createSemanticVar("background/bg-success-subtle-emphasized", "Success Scale/4")
+    ]);
+
+    // Create border variables (missing from our refactored version!)
+    await Promise.all([
+      createSemanticVar("border/br-with-sf-neutral-primary", "Neutral Scale/6"),
+      createSemanticVar("border/br-with-sf-neutral-secondary", "Neutral Scale/7"),
+      createSemanticVar("border/br-with-bg-brand-primary", "Brand Scale/10"),
+      createSemanticVar("border/br-with-bg-brand-primary-subtle", "Brand Scale/7"),
+      createSemanticVar("border/br-with-bg-success", "Success Scale/10"),
+      createSemanticVar("border/br-with-bg-success-subtle", "Success Scale/7"),
+      createSemanticVar("border/br-with-bg-error", "Error Scale/10"),
+      createSemanticVar("border/br-with-bg-error-subtle", "Error Scale/7")
     ]);
 
     log.success(`Semantic variables created successfully for mode: ${modeId}`, 'color-system', 'createSemanticVariablesForMode');
