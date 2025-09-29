@@ -447,6 +447,14 @@ export function createGridStyle(name: string, grid: GridLayout): GridStyle {
 }
 
 /**
+ * Simple test function to verify function calls work
+ */
+export async function testFunction(): Promise<string> {
+  log.info(`🧪 TEST FUNCTION CALLED`, 'figma-api', 'testFunction');
+  return "test successful";
+}
+
+/**
  * Creates or updates a color variable with hex value
  */
 export async function createOrUpdateColorVariable(collection: VariableCollection, modeId: string, name: string, colorHex: string): Promise<Variable | null> {

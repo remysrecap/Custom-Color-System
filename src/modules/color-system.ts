@@ -3,7 +3,7 @@ import { RadixTheme, PluginMessage } from '../core/types';
 import { logError, isValidHexColor, retryWithBackoff } from '../core/utils';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../core/constants';
 import { log } from '../core/logger';
-import { createOrUpdateColorVariable } from './figma-api';
+import { createOrUpdateColorVariable, testFunction } from './figma-api';
 
 // ===============================================
 // Color System Module
@@ -491,6 +491,11 @@ export async function createDirectVariables(
     
     // Test if createOrUpdateColorVariable is available
     log.info(`createOrUpdateColorVariable function available: ${typeof createOrUpdateColorVariable}`, 'color-system', 'createDirectVariables');
+    
+    // Test simple function first
+    log.info(`Testing simple function call...`, 'color-system', 'createDirectVariables');
+    const testResult = await testFunction();
+    log.info(`Test function result: ${testResult}`, 'color-system', 'createDirectVariables');
     
     // Surface variables - test one at a time
     log.info(`About to call createOrUpdateColorVariable for surface/sf-neutral-primary`, 'color-system', 'createDirectVariables');
