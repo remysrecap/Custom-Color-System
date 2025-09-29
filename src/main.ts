@@ -24,8 +24,15 @@ import { log } from './core/logger';
 // Plugin Initialization
 // ===============================================
 
-// Setup the plugin UI
-setupPluginUI();
+// Import orchestrator
+import { initializePlugin } from './orchestrator';
+
+// Initialize the plugin with orchestrator
+initializePlugin().catch(error => {
+  console.error('Failed to initialize plugin:', error);
+  figma.notify('Failed to initialize plugin. Please try again.');
+  figma.closePlugin();
+});
 
 // Track plugin closing state
 let isClosing = false;
