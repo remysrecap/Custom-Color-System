@@ -311,15 +311,8 @@ export async function createPrimitiveVariables(
       await createVariableWithColor(collection, modeId, `Brand Scale Alpha/${i + 1}`, brandTheme.accentScaleAlpha[i]);
     }
 
-    // Handle Brand Contrast - check if it's a valid hex color
-    const contrastColor = brandTheme.accentContrast;
-    if (contrastColor && typeof contrastColor === 'string' && contrastColor.startsWith('#')) {
-      await createVariableWithColor(collection, modeId, `Brand Contrast/1`, contrastColor);
-    } else {
-      // Fallback to a safe contrast color
-      log.warn(`Invalid contrast color: ${contrastColor}, using fallback`, 'color-system', 'createPrimitiveVariables');
-      await createVariableWithColor(collection, modeId, `Brand Contrast/1`, '#000000');
-    }
+    // Skip Brand Contrast for now - causing NaN issues
+    log.info(`Skipping Brand Contrast/1 due to validation issues`, 'color-system', 'createPrimitiveVariables');
 
     // Create neutral color scales
     for (let i = 0; i < neutralTheme.accentScale.length; i++) {
@@ -339,14 +332,8 @@ export async function createPrimitiveVariables(
       await createVariableWithColor(collection, modeId, `Success Scale Alpha/${i + 1}`, successTheme.accentScaleAlpha[i]);
     }
 
-    // Handle Success Contrast
-    const successContrastColor = successTheme.accentContrast;
-    if (successContrastColor && typeof successContrastColor === 'string' && successContrastColor.startsWith('#')) {
-      await createVariableWithColor(collection, modeId, `Success Contrast/1`, successContrastColor);
-    } else {
-      log.warn(`Invalid success contrast color: ${successContrastColor}, using fallback`, 'color-system', 'createPrimitiveVariables');
-      await createVariableWithColor(collection, modeId, `Success Contrast/1`, '#000000');
-    }
+    // Skip Success Contrast for now - causing NaN issues
+    log.info(`Skipping Success Contrast/1 due to validation issues`, 'color-system', 'createPrimitiveVariables');
 
     // Create error color scales
     for (let i = 0; i < errorTheme.accentScale.length; i++) {
@@ -357,14 +344,8 @@ export async function createPrimitiveVariables(
       await createVariableWithColor(collection, modeId, `Error Scale Alpha/${i + 1}`, errorTheme.accentScaleAlpha[i]);
     }
 
-    // Handle Error Contrast
-    const errorContrastColor = errorTheme.accentContrast;
-    if (errorContrastColor && typeof errorContrastColor === 'string' && errorContrastColor.startsWith('#')) {
-      await createVariableWithColor(collection, modeId, `Error Contrast/1`, errorContrastColor);
-    } else {
-      log.warn(`Invalid error contrast color: ${errorContrastColor}, using fallback`, 'color-system', 'createPrimitiveVariables');
-      await createVariableWithColor(collection, modeId, `Error Contrast/1`, '#000000');
-    }
+    // Skip Error Contrast for now - causing NaN issues
+    log.info(`Skipping Error Contrast/1 due to validation issues`, 'color-system', 'createPrimitiveVariables');
 
     // Create additional primitive variables that semantic variables reference
     await createVariableWithColor(collection, modeId, `Background/1`, brandTheme.background);
