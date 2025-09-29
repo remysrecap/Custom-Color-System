@@ -142,8 +142,8 @@ export class SystemCreationModule {
       const lightMode = semanticCollection.modes[0];
       semanticCollection.renameMode(lightMode.modeId, "Mode");
       
-      // Use light theme colors for semantic variables (flattened)
-      await createDirectVariables(semanticCollection, lightMode.modeId, 
+      // Create semantic variables with flattened hex values (no variable references)
+      await this.createFlattenedSemanticVariables(semanticCollection, lightMode.modeId, 
         themes.lightBrandTheme, themes.lightNeutralTheme, themes.lightSuccessTheme, themes.lightErrorTheme);
       
       log.success('Semantic-only system created successfully', 'system-creation-module', 'createSemanticOnlySystem');
@@ -165,6 +165,96 @@ export class SystemCreationModule {
       
     } catch (error) {
       logError('Failed to create semantic-only system', error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates flattened semantic variables with direct hex values
+   */
+  private async createFlattenedSemanticVariables(
+    collection: VariableCollection,
+    modeId: string,
+    brandTheme: any,
+    neutralTheme: any,
+    successTheme: any,
+    errorTheme: any
+  ): Promise<void> {
+    try {
+      log.info('Creating flattened semantic variables', 'system-creation-module', 'createFlattenedSemanticVariables');
+      
+      // Helper function to create variable with direct hex value
+      const createVariableWithHex = async (name: string, colorHex: string): Promise<void> => {
+        try {
+          const variable = figma.variables.createVariable(name, collection, "COLOR");
+          
+          // Convert hex to RGBA
+          const hex = colorHex.replace('#', '');
+          const r = parseInt(hex.substr(0, 2), 16) / 255;
+          const g = parseInt(hex.substr(2, 2), 16) / 255;
+          const b = parseInt(hex.substr(4, 2), 16) / 255;
+          const rgba: RGBA = { r, g, b, a: 1 };
+          
+          variable.setValueForMode(modeId, rgba);
+          log.success(`Created flattened variable: ${name} with color ${colorHex}`, 'system-creation-module', 'createFlattenedSemanticVariables');
+        } catch (error) {
+          log.error(`Failed to create variable ${name}: ${error}`, 'system-creation-module', 'createFlattenedSemanticVariables');
+        }
+      };
+
+      // Create surface variables
+      await Promise.all([
+        createVariableWithHex("surface/sf-neutral-primary", brandTheme.background),
+        createVariableWithHex("surface/sf-neutral-secondary", neutralTheme.accentScale[1]),
+        createVariableWithHex("surface/sf-brand-primary", brandTheme.accentScale[1]),
+        createVariableWithHex("surface/sf-brand-primary-emphasized", brandTheme.accentScale[2]),
+        createVariableWithHex("surface/sf-shadow", neutralTheme.accentScaleAlpha[3]),
+        createVariableWithHex("surface/sf-overlay", "#000000") // Hardcoded overlay
+      ]);
+
+      // Create text & icon variables
+      await Promise.all([
+        createVariableWithHex("text-icon/ti-neutral-primary", neutralTheme.accentScale[11]),
+        createVariableWithHex("text-icon/ti-neutral-secondary", neutralTheme.accentScale[10]),
+        createVariableWithHex("text-icon/ti-brand-primary", brandTheme.accentScale[8]),
+        createVariableWithHex("text-icon/ti-on-bg-brand-primary-subtle", brandTheme.accentScale[10]),
+        createVariableWithHex("text-icon/ti-on-bg-error-subtle", errorTheme.accentScale[10]),
+        createVariableWithHex("text-icon/ti-on-bg-success-subtle", successTheme.accentScale[10]),
+        createVariableWithHex("text-icon/ti-on-surface-overlay", "#FFFFFF") // Hardcoded white
+      ]);
+
+      // Create background variables
+      await Promise.all([
+        createVariableWithHex("background/bg-brand-primary", brandTheme.accentScale[8]),
+        createVariableWithHex("background/bg-brand-primary-emphasized", brandTheme.accentScale[9]),
+        createVariableWithHex("background/bg-brand-primary-subtle", brandTheme.accentScale[2]),
+        createVariableWithHex("background/bg-brand-primary-subtle-emphasized", brandTheme.accentScale[3]),
+        createVariableWithHex("background/bg-brand-primary-overlay", brandTheme.accentScaleAlpha[5]),
+        createVariableWithHex("background/bg-error", errorTheme.accentScale[8]),
+        createVariableWithHex("background/bg-error-emphasized", errorTheme.accentScale[9]),
+        createVariableWithHex("background/bg-error-subtle", errorTheme.accentScale[2]),
+        createVariableWithHex("background/bg-error-subtle-emphasized", errorTheme.accentScale[3]),
+        createVariableWithHex("background/bg-success", successTheme.accentScale[8]),
+        createVariableWithHex("background/bg-success-emphasized", successTheme.accentScale[9]),
+        createVariableWithHex("background/bg-success-subtle", successTheme.accentScale[2]),
+        createVariableWithHex("background/bg-success-subtle-emphasized", successTheme.accentScale[3])
+      ]);
+
+      // Create border variables
+      await Promise.all([
+        createVariableWithHex("border/br-with-sf-neutral-primary", neutralTheme.accentScale[5]),
+        createVariableWithHex("border/br-with-sf-neutral-secondary", neutralTheme.accentScale[6]),
+        createVariableWithHex("border/br-with-bg-brand-primary", brandTheme.accentScale[9]),
+        createVariableWithHex("border/br-with-bg-brand-primary-subtle", brandTheme.accentScale[6]),
+        createVariableWithHex("border/br-with-bg-success", successTheme.accentScale[9]),
+        createVariableWithHex("border/br-with-bg-success-subtle", successTheme.accentScale[6]),
+        createVariableWithHex("border/br-with-bg-error", errorTheme.accentScale[9]),
+        createVariableWithHex("border/br-with-bg-error-subtle", errorTheme.accentScale[6])
+      ]);
+
+      log.success('Flattened semantic variables created successfully', 'system-creation-module', 'createFlattenedSemanticVariables');
+    } catch (error) {
+      logError('Failed to create flattened semantic variables', error as Error);
       throw error;
     }
   }
