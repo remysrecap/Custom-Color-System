@@ -11,5 +11,5 @@
     "allowJs": true,
     "esModuleInterop": true
   },
-  "include": ["code.ts"]
+  "include": ["src/**/*.ts", "code.ts"]
 }
