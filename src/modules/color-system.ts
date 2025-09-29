@@ -3,6 +3,7 @@ import { RadixTheme, PluginMessage } from '../core/types';
 import { logError, isValidHexColor, retryWithBackoff } from '../core/utils';
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../core/constants';
 import { log } from '../core/logger';
+import { createOrUpdateColorVariable } from './figma-api';
 
 // ===============================================
 // Color System Module
