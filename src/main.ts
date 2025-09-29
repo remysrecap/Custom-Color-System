@@ -210,18 +210,24 @@ async function createPrimitiveSystem(
     const semanticCollection = await createVariableCollection(`SCS Semantic ${versionNumber}`);
     
     // Create primitive variables for each mode
+    log.info(`Creating primitive variables for appearance: ${appearance}`, 'main', 'createPrimitiveSystem');
+    
     if (appearance === "light" || appearance === "both") {
+      log.info('Creating light mode primitive variables', 'main', 'createPrimitiveSystem');
       const lightMode = primitiveCollection.modes[0];
       primitiveCollection.renameMode(lightMode.modeId, "Light");
       await createPrimitiveVariables(primitiveCollection, lightMode.modeId, 
         themes.lightBrandTheme, themes.lightNeutralTheme, themes.lightSuccessTheme, themes.lightErrorTheme);
+      log.success('Light mode primitive variables created', 'main', 'createPrimitiveSystem');
     }
     
     if (appearance === "dark" || appearance === "both") {
+      log.info('Creating dark mode primitive variables', 'main', 'createPrimitiveSystem');
       const darkModeId = appearance === "both" ? 
         primitiveCollection.addMode("Dark") : primitiveCollection.modes[0].modeId;
       await createPrimitiveVariables(primitiveCollection, darkModeId, 
         themes.darkBrandTheme, themes.darkNeutralTheme, themes.darkSuccessTheme, themes.darkErrorTheme);
+      log.success('Dark mode primitive variables created', 'main', 'createPrimitiveSystem');
     }
     
     // Create semantic variables
