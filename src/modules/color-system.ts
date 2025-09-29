@@ -73,33 +73,33 @@ export function generateColorThemes(
     background: "#FFFFFF"
   });
 
-  // Generate dark themes
+  // Generate dark themes - use different gray values for better contrast
   const darkBrandTheme: RadixTheme = generateRadixColors({
     appearance: "dark",
     accent: hexColor,
-    gray: "#555555",
-    background: "#1C1C1C"
+    gray: "#404040", // Darker gray for better contrast
+    background: "#0A0A0A" // Darker background
   });
 
   const darkNeutralTheme: RadixTheme = generateRadixColors({
     appearance: "dark",
     accent: neutral,
-    gray: "#555555",
-    background: "#1C1C1C"
+    gray: "#404040", // Darker gray for better contrast
+    background: "#0A0A0A" // Darker background
   });
 
   const darkErrorTheme: RadixTheme = generateRadixColors({
     appearance: "dark",
     accent: error,
-    gray: "#555555",
-    background: "#1C1C1C"
+    gray: "#404040", // Darker gray for better contrast
+    background: "#0A0A0A" // Darker background
   });
 
   const darkSuccessTheme: RadixTheme = generateRadixColors({
     appearance: "dark",
     accent: success,
-    gray: "#555555",
-    background: "#1C1C1C"
+    gray: "#404040", // Darker gray for better contrast
+    background: "#0A0A0A" // Darker background
   });
 
   // Debug: Log dark theme colors to verify they're different from light

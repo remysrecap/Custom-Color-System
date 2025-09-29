@@ -159,8 +159,12 @@ async function handleGeneratePalette(msg: PluginMessage): Promise<void> {
     // Generate color themes
     const themes = generateColorThemes(hexColor, neutral, success, error, appearance);
     
-    // Create collections and variables - always use primitive system (like original)
-    await createPrimitiveSystem(versionNumber, themes, appearance, includeFontSystem, exportDemo, shouldExportDocumentation);
+    // Create collections and variables based on includePrimitives setting
+    if (includePrimitives) {
+      await createPrimitiveSystem(versionNumber, themes, appearance, includeFontSystem, exportDemo, shouldExportDocumentation);
+    } else {
+      await createSemanticOnlySystem(versionNumber, themes, appearance, includeFontSystem, exportDemo, shouldExportDocumentation);
+    }
     
     // Show success notification
     if (!isClosing) {
@@ -350,6 +354,65 @@ async function createDirectSystem(
     
   } catch (error) {
     logError('Failed to create direct system', error as Error);
+    throw error;
+  }
+}
+
+/**
+ * Creates a semantic-only system with flattened hex values (no modes)
+ */
+async function createSemanticOnlySystem(
+  versionNumber: string,
+  themes: any,
+  appearance: "light" | "dark" | "both",
+  includeFontSystem: boolean,
+  exportDemo: boolean,
+  exportDocumentation: boolean
+): Promise<void> {
+  try {
+    // Import required modules
+    const { createVariableCollection } = await import('./modules/figma-api');
+    const { createDirectVariables } = await import('./modules/color-system');
+    
+    // Create only semantic collection (no primitive collection)
+    const semanticCollection = await createVariableCollection(`SCS Semantic ${versionNumber}`);
+    
+    log.info('Creating semantic-only system (flattened hex values)', 'main', 'createSemanticOnlySystem');
+    
+    // Create semantic variables with direct hex values (no modes)
+    const lightMode = semanticCollection.modes[0];
+    semanticCollection.renameMode(lightMode.modeId, "Mode");
+    
+    // Use light theme colors for semantic variables (flattened)
+    await createDirectVariables(semanticCollection, lightMode.modeId, 
+      themes.lightBrandTheme, themes.lightNeutralTheme, themes.lightSuccessTheme, themes.lightErrorTheme);
+    
+    log.success('Semantic-only system created successfully', 'main', 'createSemanticOnlySystem');
+    
+    // Create font system if enabled
+    if (includeFontSystem) {
+      await createSpacingCollection(versionNumber);
+      await createFontSystem(versionNumber);
+      await createTextStyles(versionNumber);
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    // Create demo components if enabled
+    if (exportDemo) {
+      log.info("Creating demo components...", 'main', 'createSemanticOnlySystem');
+      await exportDemoComponents(null, semanticCollection);
+      log.success("Demo components created successfully", 'main', 'createSemanticOnlySystem');
+    }
+    
+    // Create documentation if enabled
+    if (exportDocumentation) {
+      log.info("Creating documentation...", 'main', 'createSemanticOnlySystem');
+      await createDocumentation(null, semanticCollection);
+      log.success("Documentation created successfully", 'main', 'createSemanticOnlySystem');
+    }
+    
+  } catch (error) {
+    logError('Failed to create semantic-only system', error as Error);
     throw error;
   }
 }
