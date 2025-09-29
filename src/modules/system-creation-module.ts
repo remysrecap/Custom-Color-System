@@ -213,12 +213,25 @@ export class SystemCreationModule {
             log.info(`Creating new flattened variable: ${name}`, 'system-creation-module', 'createFlattenedSemanticVariables');
           }
           
-          // Convert hex to RGBA
+          // Convert hex to RGBA (handle transparency)
           const hex = colorHex.replace('#', '');
-          const r = parseInt(hex.substr(0, 2), 16) / 255;
-          const g = parseInt(hex.substr(2, 2), 16) / 255;
-          const b = parseInt(hex.substr(4, 2), 16) / 255;
-          const rgba: RGBA = { r, g, b, a: 1 };
+          let r, g, b, a = 1;
+          
+          if (hex.length === 8) {
+            // Has alpha channel (e.g., #000000A6)
+            r = parseInt(hex.substr(0, 2), 16) / 255;
+            g = parseInt(hex.substr(2, 2), 16) / 255;
+            b = parseInt(hex.substr(4, 2), 16) / 255;
+            a = parseInt(hex.substr(6, 2), 16) / 255;
+          } else {
+            // No alpha channel (e.g., #000000)
+            r = parseInt(hex.substr(0, 2), 16) / 255;
+            g = parseInt(hex.substr(2, 2), 16) / 255;
+            b = parseInt(hex.substr(4, 2), 16) / 255;
+            a = 1;
+          }
+          
+          const rgba: RGBA = { r, g, b, a };
           
           variable.setValueForMode(modeId, rgba);
           log.success(`Created flattened variable: ${name} with color ${colorHex} for mode ${modeId}`, 'system-creation-module', 'createFlattenedSemanticVariables');
@@ -234,7 +247,7 @@ export class SystemCreationModule {
         createVariableWithHex("surface/sf-brand-primary", brandTheme.accentScale[1]),
         createVariableWithHex("surface/sf-brand-primary-emphasized", brandTheme.accentScale[2]),
         createVariableWithHex("surface/sf-shadow", neutralTheme.accentScaleAlpha[3]),
-        createVariableWithHex("surface/sf-overlay", "#000000") // Hardcoded overlay
+        createVariableWithHex("surface/sf-overlay", "#000000A6") // Hardcoded overlay with transparency
       ]);
 
       // Create text & icon variables
