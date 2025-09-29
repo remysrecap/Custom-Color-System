@@ -453,15 +453,20 @@ export async function createOrUpdateColorVariable(collection: VariableCollection
   log.info(`Attempting to create or update color variable: ${name} with color: ${colorHex}`, 'figma-api', 'createOrUpdateColorVariable');
   
   try {
+    log.info(`Step 1: Finding existing variable for ${name}`, 'figma-api', 'createOrUpdateColorVariable');
     const existingVariable = await findExistingVariable(collection, name);
+    log.info(`Step 2: Converting hex to RGB: ${colorHex}`, 'figma-api', 'createOrUpdateColorVariable');
     const rgb = hexToRgb(colorHex);
     
     if (!rgb) {
       log.error(`Failed to convert hex to RGB for color: ${colorHex}`, 'figma-api', 'createOrUpdateColorVariable');
       return null;
     }
+    
+    log.info(`Step 3: RGB conversion successful: ${JSON.stringify(rgb)}`, 'figma-api', 'createOrUpdateColorVariable');
 
     if (existingVariable) {
+      log.info(`Step 4: Updating existing variable ${name}`, 'figma-api', 'createOrUpdateColorVariable');
       const variable = await figma.variables.getVariableByIdAsync(existingVariable);
       if (variable) {
         await variable.setValueForMode(modeId, rgb);
@@ -470,11 +475,13 @@ export async function createOrUpdateColorVariable(collection: VariableCollection
       }
     }
 
+    log.info(`Step 5: Creating new variable ${name}`, 'figma-api', 'createOrUpdateColorVariable');
     const variable = figma.variables.createVariable(name, collection, "COLOR");
     await variable.setValueForMode(modeId, rgb);
     log.success(`Created variable ${name} with value: ${JSON.stringify(rgb)}`, 'figma-api', 'createOrUpdateColorVariable');
     return variable;
   } catch (error) {
+    log.error(`Detailed error for ${name}: ${error}`, 'figma-api', 'createOrUpdateColorVariable');
     logError(`Failed to create/update color variable: ${name}`, error as Error);
     return null;
   }
