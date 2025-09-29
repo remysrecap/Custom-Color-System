@@ -483,28 +483,52 @@ export async function createDirectVariables(
   log.info(`Creating direct variables for mode: ${modeId}`, 'color-system', 'createDirectVariables');
   
   try {
-    // Create brand variables
-    await createOrUpdateColorVariable(collection, modeId, "Brand", brandTheme.accentScale[8]);
-    await createOrUpdateColorVariable(collection, modeId, "Brand Hover", brandTheme.accentScale[9]);
-    await createOrUpdateColorVariable(collection, modeId, "Brand Active", brandTheme.accentScale[10]);
-    await createOrUpdateColorVariable(collection, modeId, "Brand Contrast", brandTheme.accentContrast);
+    // Surface variables
+    await Promise.all([
+      createOrUpdateColorVariable(collection, modeId, "surface/sf-neutral-primary", brandTheme.background),
+      createOrUpdateColorVariable(collection, modeId, "surface/sf-neutral-secondary", neutralTheme.accentScale[1]),
+      createOrUpdateColorVariable(collection, modeId, "surface/sf-brand-primary", brandTheme.accentScale[1]),
+      createOrUpdateColorVariable(collection, modeId, "surface/sf-brand-primary-emphasized", brandTheme.accentScale[2]),
+      createOrUpdateColorVariable(collection, modeId, "surface/sf-shadow", neutralTheme.accentScaleAlpha[3])
+    ]);
 
-    // Create neutral variables
-    await createOrUpdateColorVariable(collection, modeId, "Neutral", neutralTheme.accentScale[8]);
-    await createOrUpdateColorVariable(collection, modeId, "Neutral Hover", neutralTheme.accentScale[9]);
-    await createOrUpdateColorVariable(collection, modeId, "Neutral Active", neutralTheme.accentScale[10]);
+    // Text & Icon variables
+    await Promise.all([
+      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-neutral-primary", neutralTheme.accentScale[12]),
+      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-neutral-secondary", neutralTheme.accentScale[11]),
+      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-brand-primary", brandTheme.accentScale[9]),
+      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-brand-primary", brandTheme.accentContrast),
+      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-brand-primary-subtle", brandTheme.accentScale[11]),
+      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-error", errorTheme.accentContrast),
+      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-error-subtle", errorTheme.accentScale[11]),
+      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-success", successTheme.accentContrast),
+      createOrUpdateColorVariable(collection, modeId, "text-icon/ti-on-bg-success-subtle", successTheme.accentScale[11])
+    ]);
 
-    // Create success variables
-    await createOrUpdateColorVariable(collection, modeId, "Success", successTheme.accentScale[8]);
-    await createOrUpdateColorVariable(collection, modeId, "Success Hover", successTheme.accentScale[9]);
-    await createOrUpdateColorVariable(collection, modeId, "Success Active", successTheme.accentScale[10]);
-    await createOrUpdateColorVariable(collection, modeId, "Success Contrast", successTheme.accentContrast);
+    // Background variables
+    await Promise.all([
+      createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary", brandTheme.accentScale[9]),
+      createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-emphasized", brandTheme.accentScale[10]),
+      createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle", brandTheme.accentScale[3]),
+      createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-subtle-emphasized", brandTheme.accentScale[4]),
+      createOrUpdateColorVariable(collection, modeId, "background/bg-brand-primary-overlay", brandTheme.accentScaleAlpha[6]),
+      createOrUpdateColorVariable(collection, modeId, "background/bg-error", errorTheme.accentScale[9]),
+      createOrUpdateColorVariable(collection, modeId, "background/bg-error-emphasized", errorTheme.accentScale[10]),
+      createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle", errorTheme.accentScale[3]),
+      createOrUpdateColorVariable(collection, modeId, "background/bg-error-subtle-emphasized", errorTheme.accentScale[4]),
+      createOrUpdateColorVariable(collection, modeId, "background/bg-success", successTheme.accentScale[9]),
+      createOrUpdateColorVariable(collection, modeId, "background/bg-success-emphasized", successTheme.accentScale[10]),
+      createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle", successTheme.accentScale[3]),
+      createOrUpdateColorVariable(collection, modeId, "background/bg-success-subtle-emphasized", successTheme.accentScale[4])
+    ]);
 
-    // Create error variables
-    await createOrUpdateColorVariable(collection, modeId, "Error", errorTheme.accentScale[8]);
-    await createOrUpdateColorVariable(collection, modeId, "Error Hover", errorTheme.accentScale[9]);
-    await createOrUpdateColorVariable(collection, modeId, "Error Active", errorTheme.accentScale[10]);
-    await createOrUpdateColorVariable(collection, modeId, "Error Contrast", errorTheme.accentContrast);
+    // Hardcoded variables
+    log.info(`Creating hardcoded variables for mode: ${modeId}`, 'color-system', 'createDirectVariables');
+    await Promise.all([
+      createOrUpdateHardcodedVar(collection, modeId, "surface/sf-overlay", { r: 0, g: 0, b: 0, a: 0.65 }),
+      createOrUpdateHardcodedVar(collection, modeId, "text-icon/ti-on-surface-overlay", { r: 1, g: 1, b: 1, a: 1 })
+    ]);
+    log.info(`Finished creating hardcoded variables`, 'color-system', 'createDirectVariables');
 
     log.success('Direct variables created successfully', 'color-system', 'createDirectVariables');
   } catch (error) {
