@@ -507,13 +507,25 @@ export async function createDirectVariables(
       log.error(`Direct API call error: ${error}`, 'color-system', 'createDirectVariables');
     }
     
-    // Continue with the rest
-    await Promise.all([
-      createOrUpdateColorVariable(collection, modeId, "surface/sf-neutral-secondary", neutralTheme.accentScale[1]),
-      createOrUpdateColorVariable(collection, modeId, "surface/sf-brand-primary", brandTheme.accentScale[1]),
-      createOrUpdateColorVariable(collection, modeId, "surface/sf-brand-primary-emphasized", brandTheme.accentScale[2]),
-      createOrUpdateColorVariable(collection, modeId, "surface/sf-shadow", neutralTheme.accentScaleAlpha[3])
-    ]);
+    // Continue with direct API calls since the function wrapper is broken
+    log.info(`Creating remaining variables with direct API calls`, 'color-system', 'createDirectVariables');
+    
+    // Surface variables - direct API calls
+    const surfaceVars = [
+      { name: "surface/sf-neutral-secondary", color: neutralTheme.accentScale[1] },
+      { name: "surface/sf-brand-primary", color: brandTheme.accentScale[1] },
+      { name: "surface/sf-brand-primary-emphasized", color: brandTheme.accentScale[2] },
+      { name: "surface/sf-shadow", color: neutralTheme.accentScaleAlpha[3] }
+    ];
+    
+    for (const { name, color } of surfaceVars) {
+      try {
+        const variable = figma.variables.createVariable(name, collection, "COLOR");
+        log.success(`Created variable: ${name}`, 'color-system', 'createDirectVariables');
+      } catch (error) {
+        log.error(`Failed to create variable ${name}: ${error}`, 'color-system', 'createDirectVariables');
+      }
+    }
 
     // Text & Icon variables
     await Promise.all([
