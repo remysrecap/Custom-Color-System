@@ -196,7 +196,22 @@ export class SystemCreationModule {
       // Helper function to create variable with direct hex value
       const createVariableWithHex = async (name: string, colorHex: string): Promise<void> => {
         try {
-          const variable = figma.variables.createVariable(name, collection, "COLOR");
+          // Check if variable already exists
+          let variable: Variable;
+          const existingVariables = await Promise.all(
+            collection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
+          );
+          const existingVar = existingVariables.find(v => v && v.name === name);
+          
+          if (existingVar) {
+            // Variable exists, just set the value for this mode
+            variable = existingVar;
+            log.info(`Using existing flattened variable: ${name}`, 'system-creation-module', 'createFlattenedSemanticVariables');
+          } else {
+            // Create new variable
+            variable = figma.variables.createVariable(name, collection, "COLOR");
+            log.info(`Creating new flattened variable: ${name}`, 'system-creation-module', 'createFlattenedSemanticVariables');
+          }
           
           // Convert hex to RGBA
           const hex = colorHex.replace('#', '');
@@ -206,7 +221,7 @@ export class SystemCreationModule {
           const rgba: RGBA = { r, g, b, a: 1 };
           
           variable.setValueForMode(modeId, rgba);
-          log.success(`Created flattened variable: ${name} with color ${colorHex}`, 'system-creation-module', 'createFlattenedSemanticVariables');
+          log.success(`Created flattened variable: ${name} with color ${colorHex} for mode ${modeId}`, 'system-creation-module', 'createFlattenedSemanticVariables');
         } catch (error) {
           log.error(`Failed to create variable ${name}: ${error}`, 'system-creation-module', 'createFlattenedSemanticVariables');
         }

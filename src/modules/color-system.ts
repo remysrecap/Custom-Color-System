@@ -287,9 +287,22 @@ async function createVariableWithColor(
   colorHex: string
 ): Promise<void> {
   try {
-    // Create new variable directly (let Figma handle duplicates)
-    const variable = figma.variables.createVariable(name, collection, "COLOR");
-    log.info(`Creating variable: ${name}`, 'color-system', 'createPrimitiveVariables');
+    // Check if variable already exists
+    let variable: Variable;
+    const existingVariables = await Promise.all(
+      collection.variableIds.map(id => figma.variables.getVariableByIdAsync(id))
+    );
+    const existingVar = existingVariables.find(v => v && v.name === name);
+    
+    if (existingVar) {
+      // Variable exists, just set the value for this mode
+      variable = existingVar;
+      log.info(`Using existing variable: ${name}`, 'color-system', 'createPrimitiveVariables');
+    } else {
+      // Create new variable
+      variable = figma.variables.createVariable(name, collection, "COLOR");
+      log.info(`Creating new variable: ${name}`, 'color-system', 'createPrimitiveVariables');
+    }
     
     // Convert hex to RGBA and set the value
     const hex = colorHex.replace('#', '');
